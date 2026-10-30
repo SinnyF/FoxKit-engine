@@ -1,34 +1,34 @@
 
 #include <iostream>
+#include <vector>
+#include <chrono>
+#include <thread>
 #include "headers/Renderer.h"
+using namespace std;
+
+const Renderer* Render = new Renderer();;
 
 void ProcessInput(GLFWwindow *window) {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+		Render->SetColors();
 }
 
 int main()
-	{
-		Renderer* rend = new Renderer();
-		
-		if (!rend->InitializeRenderer())
+	{		
+		if (!Render->InitializeRenderer())
 			return -1;
-		glfwSetWindowShouldClose(rend->GetWindow(), false);
+		glfwSetWindowShouldClose(Render->GetWindow(), false);
 
-		float vertices[] = {
-			-0.5f,-0.5f, 0.0f,
-			0.5f, -0.5f, 0.0f,
-			0.0f, 0.5f, 0.0f
-		};
-
-
-		while (!glfwWindowShouldClose(rend->GetWindow())) {
-			ProcessInput(rend->GetWindow());
-			rend->Render();
+		while (!glfwWindowShouldClose(Render->GetWindow())) {
+			ProcessInput(Render->GetWindow());
+			Render->Render();
 			glfwPollEvents();
+			this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 
-		rend->Terminate();
+		Render->Terminate();
 		return 0;
 	}
 
