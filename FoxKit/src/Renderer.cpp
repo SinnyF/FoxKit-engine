@@ -7,6 +7,9 @@
 	static unsigned int VBO, VAO;
 	static unsigned int EBO;
 	static vector<Shader> shaders;
+
+
+	static float tempCols[9] = {0,0,0,0,0,0,0,0,0};
 	
 void WindowResized(GLFWwindow* window, int width, int height) 
 {
@@ -45,7 +48,8 @@ int Renderer::InitializeRenderer()
 	glGenBuffers(1, &EBO);
 
 	shaders.push_back( Shader("src/shaders/base.vert", "src/shaders/base.frag"));
-	shaders[0].use();
+	shaders.push_back(Shader("src/shaders/base.vert", "src/shaders/base2.frag"));
+	
 	SetColors();
 
 	return 1;
@@ -87,12 +91,25 @@ void Renderer::Render()
 		0.7f, 0.3f, 0.0f, 0.0f, 0.0f, 1.0f,
 		0.0f, 0.9f, 0.0f, 0.0f, 1.0f, 0.0f
 	};
+	
+	int colorLocation1 = glGetUniformLocation(shaders[0].ID, "color1");
+	int colorLocation2 = glGetUniformLocation(shaders[0].ID, "color2");
+	int colorLocation3 = glGetUniformLocation(shaders[0].ID, "color3");
+	int colSolidLocation = glGetUniformLocation(shaders[1].ID, "colSolid");
+	shaders[0].use();
+	glUniform3f(colorLocation1, tempCols[0], tempCols[1], tempCols[2]);
+	glUniform3f(colorLocation2, tempCols[3], tempCols[4], tempCols[5]);
+	glUniform3f(colorLocation3, tempCols[6], tempCols[7], tempCols[8]);
+	DrawTriangle(tri);
+	shaders[1].use();
 
+	glUniform3f(colSolidLocation, 0.0f, 1.0f, 0.0f);
 	DrawRectangle(rect);
+	glUniform3f(colSolidLocation, 1.0f, 0.0f, 0.0f);
 	DrawRectangle(rectdoor);
+	glUniform3f(colSolidLocation, 0.0f, 0.0f, 1.0f);
 	DrawRectangle(rectwindow);
 	DrawRectangle(rectwindow2);
-	DrawTriangle(tri);
 
 	glfwSwapBuffers(window);
 }
@@ -109,13 +126,11 @@ GLFWwindow* Renderer::GetWindow()
 void Renderer::SetColors()
 {
 	srand(time(0));
-	int colorLocation1 = glGetUniformLocation(shaders[0].ID, "color1");
-	int colorLocation2 = glGetUniformLocation(shaders[0].ID, "color2");
-	int colorLocation3 = glGetUniformLocation(shaders[0].ID, "color3");
-
-	glUniform3f(colorLocation1, (float)(rand() % 101) / 100.0f, (float)(rand() % 101) / 100.0f, (float)(rand() % 101) / 100.0f);
-	glUniform3f(colorLocation2, (float)(rand() % 101) / 100.0f, (float)(rand() % 101) / 100.0f, (float)(rand() % 101) / 100.0f);
-	glUniform3f(colorLocation3, (float)(rand() % 101) / 100.0f, (float)(rand() % 101) / 100.0f, (float)(rand() % 101) / 100.0f);
+	
+	for (int i = 0; i < 9; i++) {
+		tempCols[i] = (float)(rand() % 101) / 100.0f;
+	}
+	
 }
 
 void Renderer::DrawTriangle(vector<float> verts)
