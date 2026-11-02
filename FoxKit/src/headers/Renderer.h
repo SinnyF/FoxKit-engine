@@ -26,5 +26,6 @@ private:
 	static vector<mesh> objects;
 	static void DrawTriangle(vector<float> verts);
 	static void DrawRectangle(vector<float> verts);
+    
 };
 

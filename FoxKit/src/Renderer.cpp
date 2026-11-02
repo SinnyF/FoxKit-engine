@@ -10,6 +10,28 @@
 
 
 	static float tempCols[9] = {0,0,0,0,0,0,0,0,0};
+
+	GLenum glCheckError_(const char* file, int line)
+	{
+		GLenum errorCode;
+		while ((errorCode = glGetError()) != GL_NO_ERROR)
+		{
+			std::string error;
+			switch (errorCode)
+			{
+			case GL_INVALID_ENUM:                  error = "INVALID_ENUM"; break;
+			case GL_INVALID_VALUE:                 error = "INVALID_VALUE"; break;
+			case GL_INVALID_OPERATION:             error = "INVALID_OPERATION"; break;
+			case GL_STACK_OVERFLOW:                error = "STACK_OVERFLOW"; break;
+			case GL_STACK_UNDERFLOW:               error = "STACK_UNDERFLOW"; break;
+			case GL_OUT_OF_MEMORY:                 error = "OUT_OF_MEMORY"; break;
+			case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
+			}
+			std::cout << error << " | " << file << " (" << line << ")" << std::endl;
+		}
+		return errorCode;
+	}
+#define glCheckError() glCheckError_(__FILE__, __LINE__) 
 	
 void WindowResized(GLFWwindow* window, int width, int height) 
 {
@@ -46,6 +68,7 @@ int Renderer::InitializeRenderer()
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 	glGenBuffers(1, &EBO);
+	glCheckError();
 
 	shaders.push_back( Shader("src/shaders/base.vert", "src/shaders/base.frag"));
 	shaders.push_back(Shader("src/shaders/base.vert", "src/shaders/base2.frag"));
@@ -111,6 +134,8 @@ void Renderer::Render()
 	DrawRectangle(rectwindow);
 	DrawRectangle(rectwindow2);
 
+	glCheckError();
+
 	glfwSwapBuffers(window);
 }
 
@@ -150,7 +175,7 @@ void Renderer::DrawTriangle(vector<float> verts)
 
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glBindVertexArray(0);
-
+	glCheckError();
 }
 
 void Renderer::DrawRectangle(vector<float> verts)
@@ -177,5 +202,6 @@ void Renderer::DrawRectangle(vector<float> verts)
 
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+	glCheckError();
 }
 
