@@ -65,9 +65,29 @@ int Renderer::InitializeRenderer()
 	glViewport(0, 0, 1366, 768);
 	glfwSetFramebufferSizeCallback(window, WindowResized);
 
+	float triangle[18] = {
+		0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+		1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f
+	};
+
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
+	glCheckError();
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle), &triangle, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glCheckError();
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glCheckError();
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	
+	glBindVertexArray(0);
+
 	glCheckError();
 
 	shaders.push_back( Shader("src/shaders/base.vert", "src/shaders/base.frag"));
@@ -82,38 +102,6 @@ void Renderer::Render()
 {
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-
-	
-
-	vector<float> rect = {
-		-0.5f,-0.7f, 0.0f, 0.0f, 0.0f, 1.0f, //bl
-		0.5f, -0.7f, 0.0f, 0.0f, 1.0f, 0.0f, //br
-		0.5f, 0.3f, 0.0f, 0.0f, 0.0f, 1.0f, //tr
-		-0.5f, 0.3f, 0.0f, 1.0f, 0.0f, 0.0f
-	};
-	vector<float> rectdoor = {
-		-0.1f,-0.7f, 0.0f, 1.0f, 0.0f, 0.0f, //bl
-		0.1f, -0.7f, 0.0f, 1.0f, 0.0f, 0.0f, //br
-		0.1f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, //tr
-		-0.1f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f
-	};
-	vector<float> rectwindow = {
-		-0.4f,-0.5f, 0.0f, 1.0f, 0.0f, 0.0f, //bl
-		-0.2f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, //br
-		-0.2f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, //tr
-		-0.4f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f
-	};
-	vector<float> rectwindow2 = {
-		0.2f,-0.5f, 0.0f, 1.0f, 0.0f, 0.0f, //bl
-		0.4f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, //br
-		0.4f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, //tr
-		0.2f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f
-	};
-	vector<float> tri = {
-		-0.7f, 0.3f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.7f, 0.3f, 0.0f, 0.0f, 0.0f, 1.0f,
-		0.0f, 0.9f, 0.0f, 0.0f, 1.0f, 0.0f
-	};
 	
 	int colorLocation1 = glGetUniformLocation(shaders[0].ID, "color1");
 	int colorLocation2 = glGetUniformLocation(shaders[0].ID, "color2");
@@ -123,16 +111,17 @@ void Renderer::Render()
 	glUniform3f(colorLocation1, tempCols[0], tempCols[1], tempCols[2]);
 	glUniform3f(colorLocation2, tempCols[3], tempCols[4], tempCols[5]);
 	glUniform3f(colorLocation3, tempCols[6], tempCols[7], tempCols[8]);
-	DrawTriangle(tri);
+	DrawTriangle(0,0.0f, -0.1f, 0.0f, 0.5f);
+	DrawTriangle(0, 0.0f, -0.1f, 0.0f, 0.5f, -1.0f);
 	shaders[1].use();
 
 	glUniform3f(colSolidLocation, 0.0f, 1.0f, 0.0f);
-	DrawRectangle(rect);
+	DrawRectangle(1, -0.4f, -0.9f, 0.0f, 0.8f);
 	glUniform3f(colSolidLocation, 1.0f, 0.0f, 0.0f);
-	DrawRectangle(rectdoor);
+	DrawRectangle(1,0.1f, -0.9f, 0.0f, 0.3f);
 	glUniform3f(colSolidLocation, 0.0f, 0.0f, 1.0f);
-	DrawRectangle(rectwindow);
-	DrawRectangle(rectwindow2);
+	DrawRectangle(1,-0.4f, -0.4f, 0.0f, 0.2f);
+	DrawRectangle(1,0.2f, -0.4f, 0.0f, 0.2f);
 
 	glCheckError();
 
@@ -158,50 +147,27 @@ void Renderer::SetColors()
 	
 }
 
-void Renderer::DrawTriangle(vector<float> verts)
+void Renderer::DrawTriangle(int shader, float offsetX, float offsetY, float offsetZ, float scale, float flipX, float flipY, float flipZ)
 {
-	float toArray[18];
-	copy(verts.begin(), verts.end(),toArray);
-
+	int uniform1 = glGetUniformLocation(shaders[shader].ID, "offset");
+	int uniform2 = glGetUniformLocation(shaders[shader].ID, "scaling");
+	int uniform3 = glGetUniformLocation(shaders[shader].ID, "flip");
+	glCheckError();
+	glUniform3f(uniform1, offsetX, offsetY, offsetZ);
+	glCheckError();
+	glUniform3f(uniform3, flipX, flipY, flipZ);
+	glCheckError();
+	glUniform1f(uniform2, scale);
+	glCheckError();
 	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(toArray), &toArray, GL_STATIC_DRAW);
-	
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glBindVertexArray(0);
 	glCheckError();
 }
 
-void Renderer::DrawRectangle(vector<float> verts)
+void Renderer::DrawRectangle(int shader, float offsetX, float offsetY, float offsetZ, float scale)
 {
-	unsigned int indices[] = {
-	0, 1, 3,   // first triangle
-	1, 2, 3    // second triangle
-	};
-
-	float toArray[24];
-	copy(verts.begin(), verts.end(), toArray);
-
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(toArray), &toArray, GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-	glCheckError();
+	DrawTriangle(shader, offsetX, offsetY, offsetZ, scale);
+	DrawTriangle(shader, offsetX + scale, offsetY + scale, offsetZ , scale, -1.0f, -1.0f);
 }
 

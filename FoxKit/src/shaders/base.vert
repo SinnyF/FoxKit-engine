@@ -2,10 +2,15 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aCol;
 
+uniform vec3 offset;
+uniform float scaling;
+uniform vec3 flip;
+
 out vec3 outCol;
 
 void main()
 {
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    vec3 translatedPosition = ((aPos * flip) *scaling) + offset;
+    gl_Position = vec4(translatedPosition, 1.0);
     outCol = aCol;
 }

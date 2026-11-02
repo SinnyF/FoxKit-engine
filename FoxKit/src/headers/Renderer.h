@@ -24,8 +24,8 @@ public:
 	static void SetColors();
 private:
 	static vector<mesh> objects;
-	static void DrawTriangle(vector<float> verts);
-	static void DrawRectangle(vector<float> verts);
+	static void DrawTriangle(int shader, float offsetX, float offsetY, float offsetZ, float scale, float flipX = 1.0f, float flipY = 1.0f, float flipZ = 1.0f);
+	static void DrawRectangle(int shader, float offsetX, float offsetY, float offsetZ, float scale);
     
 };
 
