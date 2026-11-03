@@ -4,12 +4,12 @@
 #include <algorithm>
 #include <cstdlib>
 
-	static unsigned int VBO, VAO;
-	static unsigned int EBO;
+	static unsigned int VBO, EBO;
 	static vector<Shader> shaders;
 	static Camera camera;
 	static vector<Mesh> objects;
 	static double _time = 0;
+	static PROJECTION proj = PERSPECTIVE;
 
 	static float tempCols[9] = {0,0,0,0,0,0,0,0,0};
 
@@ -35,6 +35,17 @@
 	}
 #define glCheckError() glCheckError_(__FILE__, __LINE__) 
 	
+void Renderer::SwitchProjection() {
+	switch (proj) {
+	case PERSPECTIVE:
+		proj = ORTOGRAPHIC;
+		break;
+	case ORTOGRAPHIC:
+		proj = PERSPECTIVE;
+		break;
+	}
+}
+
 void WindowResized(GLFWwindow* window, int width, int height) 
 {
 	glViewport(0,0,width,height);
@@ -70,24 +81,8 @@ int Renderer::InitializeRenderer()
 	glfwSetFramebufferSizeCallback(window, WindowResized);
 
 	AddObject(Mesh(CUBE));
-
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-
-	glCheckError();
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, objects[0].Vertices().size() * sizeof(float), &objects[0].Vertices()[0], GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, objects[0].Indices().size() * sizeof(int), &objects[0].Indices()[0], GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
-	glBindVertexArray(0);
+	AddObject(Mesh(PYRAMID));
+	AddObject(Mesh(SPHERE));
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -109,26 +104,49 @@ void Renderer::Render()
 	int viewLocation = glGetUniformLocation(shaders[0].ID, "view");
 	int ProjectionlLocation = glGetUniformLocation(shaders[0].ID, "projection");
 
-	_time += 0.01f;
-	camera.position = vec3(glm::sin(_time), glm::sin(_time) + 3.0f, glm::sin(_time));
+	_time = glfwGetTime();
+
+	camera.position = vec3(8.0f, 6.0f, sin(_time) * 4.0f);
 
 	mat4 model = mat4(1.0f);
-	model = translate(model, vec3(0, 0, 0));
-	model = rotate(model, radians(30.0f * (float)_time), vec3(0,0, 1.0f));
+	model = rotate(model, radians(90.0f * (float)_time), vec3(0,0, 1.0f));
+
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera.GetView()));
-	glUniformMatrix4fv(ProjectionlLocation, 1, GL_FALSE, glm::value_ptr(camera.GetProjection(PERSPECTIVE)));
+	glUniformMatrix4fv(ProjectionlLocation, 1, GL_FALSE, glm::value_ptr(camera.GetProjection(proj)));
+	Draw(objects[0]);
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(0.0f, 2.0f, 2.0f));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+	Draw(objects[0]);
 
-	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, objects[0].Indices().size(), GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-	
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(0.0f, 0.0f, 1.0f));
+	model = glm::scale(model, vec3(sin(_time), sin(_time), sin(_time)));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+	Draw(objects[1]);
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(0.0f, -2.0f, -2.0f));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+	Draw(objects[1]);
+
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(sin(_time) * 5, cos(_time) * 5, sin(_time) * 5));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+	Draw(objects[2]);
+	model = mat4(1.0f);
+	model = glm::translate(model, vec3(-2.0f, 3.0f, 0.0f));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+	Draw(objects[2]);
+
 	glCheckError();
 	glfwSwapBuffers(window);
 }
 
 void Renderer::Terminate() {
-	glDeleteVertexArrays(1, &VAO);
+	for (int i = 0; i < objects.size(); i++) {
+		glDeleteVertexArrays(1, &objects[i].VAO);
+	}
 	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
 }
@@ -140,7 +158,29 @@ GLFWwindow* Renderer::GetWindow()
 
 void Renderer::AddObject(Mesh obj)
 {
+	glGenVertexArrays(1, &obj.VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+
+	glCheckError();
+	glBindVertexArray(obj.VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, obj.Vertices().size() * sizeof(float), &obj.Vertices()[0], GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.Indices().size() * sizeof(unsigned int), &obj.Indices()[0], GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
 	objects.push_back(obj);
 }
-
+void Renderer::Draw(Mesh obj)
+{
+	glBindVertexArray(obj.VAO);
+	glDrawElements(GL_TRIANGLES, obj.Indices().size(), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
 

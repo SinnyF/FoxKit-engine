@@ -23,8 +23,9 @@ public:
 	static void Terminate();
 	static GLFWwindow* GetWindow();
 	static void AddObject(Mesh obj);
+	static void SwitchProjection();
 private:
 	
-	
+	static void Draw(Mesh obj);
 };
 

@@ -13,12 +13,12 @@ class Mesh
 public:
 	Mesh(PRIMITIVES primitive);
 	vector<float> Vertices();
-	vector<int> Indices();
+	vector<unsigned int> Indices();
 	vec3 position = vec3(0,0,0);
-	
+	unsigned int VAO;
 private:
 	vector<float> vertexList;
-	vector<int> indexList;
+	vector<unsigned int> indexList;
 	
 };
 

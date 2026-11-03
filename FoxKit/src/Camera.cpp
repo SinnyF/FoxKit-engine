@@ -2,7 +2,7 @@
 
 Camera::Camera()
 {
-	position = vec3(2.0f,3.0f,0);
+	position = vec3(8.0f,6.0f,3.0f);
 	target = vec3(0,0,0);
 	up = vec3(0,0,1.0f);
 }
@@ -19,7 +19,9 @@ mat4 Camera::GetProjection(PROJECTION proj) const
 		return perspective(radians(FOV), aspectRatio, nearPlane, farPlane);
 		break;
 	case ORTOGRAPHIC:
-		return ortho(-683.0f, 683.0f, -384.0f, 384.0f);
+		float scale = 8.0f;
+		return ortho(-1.366f * scale, 1.366f * scale, -0.768f * scale, 0.768f * scale, 0.0f, 1000.0f);
+		//return ortho(0.0f, 1366.0f, 0.0f, 768.0f, nearPlane, farPlane);
 		break;
 	}
 }

@@ -8,11 +8,11 @@ using namespace std;
 
 const Renderer* Render = new Renderer();;
 
-void ProcessInput(GLFWwindow *window) {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	if(key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+		Render->SwitchProjection();
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		;
 }
 
 int main()
@@ -20,9 +20,8 @@ int main()
 		if (!Render->InitializeRenderer())
 			return -1;
 		glfwSetWindowShouldClose(Render->GetWindow(), false);
-
+		glfwSetKeyCallback(Render->GetWindow(), key_callback);
 		while (!glfwWindowShouldClose(Render->GetWindow())) {
-			ProcessInput(Render->GetWindow());
 			Render->Render();
 			glfwPollEvents();
 			this_thread::sleep_for(std::chrono::milliseconds(10));
