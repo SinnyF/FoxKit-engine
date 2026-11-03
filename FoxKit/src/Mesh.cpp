@@ -32,16 +32,16 @@ Mesh::Mesh(PRIMITIVES primitive)
 	case PYRAMID:
 		break;
 	case SPHERE:
-
+		break;
 	}
 }
 
-vector<float>* Mesh::Vertices()
+vector<float> Mesh::Vertices()
 {
-	return nullptr;
+	return vertexList;
 }
 
-vector<float>* Mesh::Indices()
+vector<int> Mesh::Indices()
 {
-	return nullptr;
+	return indexList;
 }

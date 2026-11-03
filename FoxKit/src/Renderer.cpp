@@ -7,7 +7,9 @@
 	static unsigned int VBO, VAO;
 	static unsigned int EBO;
 	static vector<Shader> shaders;
-
+	static Camera camera;
+	static vector<Mesh> objects;
+	static double _time = 0;
 
 	static float tempCols[9] = {0,0,0,0,0,0,0,0,0};
 
@@ -62,38 +64,36 @@ int Renderer::InitializeRenderer()
 		return 0;
 	}
 
+	camera = Camera();
+
 	glViewport(0, 0, 1366, 768);
 	glfwSetFramebufferSizeCallback(window, WindowResized);
 
-	float triangle[18] = {
-		0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-		1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f
-	};
+	AddObject(Mesh(CUBE));
 
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+
 	glCheckError();
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle), &triangle, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, objects[0].Vertices().size() * sizeof(float), &objects[0].Vertices()[0], GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glCheckError();
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	glCheckError();
-	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, objects[0].Indices().size() * sizeof(int), &objects[0].Indices()[0], GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
 	glBindVertexArray(0);
 
+	glEnable(GL_DEPTH_TEST);
+
 	glCheckError();
 
-	shaders.push_back( Shader("src/shaders/base.vert", "src/shaders/base.frag"));
-	shaders.push_back(Shader("src/shaders/base.vert", "src/shaders/base2.frag"));
-	
-	SetColors();
+	shaders.push_back( Shader("src/shaders/base.vert", "src/shaders/base2.frag"));
 
 	return 1;
 }
@@ -101,34 +101,35 @@ int Renderer::InitializeRenderer()
 void Renderer::Render()
 {
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	
-	int colorLocation1 = glGetUniformLocation(shaders[0].ID, "color1");
-	int colorLocation2 = glGetUniformLocation(shaders[0].ID, "color2");
-	int colorLocation3 = glGetUniformLocation(shaders[0].ID, "color3");
-	int colSolidLocation = glGetUniformLocation(shaders[1].ID, "colSolid");
+	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
 	shaders[0].use();
-	glUniform3f(colorLocation1, tempCols[0], tempCols[1], tempCols[2]);
-	glUniform3f(colorLocation2, tempCols[3], tempCols[4], tempCols[5]);
-	glUniform3f(colorLocation3, tempCols[6], tempCols[7], tempCols[8]);
-	DrawTriangle(0,0.0f, -0.1f, 0.0f, 0.5f);
-	DrawTriangle(0, 0.0f, -0.1f, 0.0f, 0.5f, -1.0f);
-	shaders[1].use();
 
-	glUniform3f(colSolidLocation, 0.0f, 1.0f, 0.0f);
-	DrawRectangle(1, -0.4f, -0.9f, 0.0f, 0.8f);
-	glUniform3f(colSolidLocation, 1.0f, 0.0f, 0.0f);
-	DrawRectangle(1,0.1f, -0.9f, 0.0f, 0.3f);
-	glUniform3f(colSolidLocation, 0.0f, 0.0f, 1.0f);
-	DrawRectangle(1,-0.4f, -0.4f, 0.0f, 0.2f);
-	DrawRectangle(1,0.2f, -0.4f, 0.0f, 0.2f);
+	int modelLocation = glGetUniformLocation(shaders[0].ID, "model");
+	int viewLocation = glGetUniformLocation(shaders[0].ID, "view");
+	int ProjectionlLocation = glGetUniformLocation(shaders[0].ID, "projection");
 
+	_time += 0.01f;
+	camera.position = vec3(glm::sin(_time), glm::sin(_time) + 3.0f, glm::sin(_time));
+
+	mat4 model = mat4(1.0f);
+	model = translate(model, vec3(0, 0, 0));
+	model = rotate(model, radians(30.0f * (float)_time), vec3(0,0, 1.0f));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera.GetView()));
+	glUniformMatrix4fv(ProjectionlLocation, 1, GL_FALSE, glm::value_ptr(camera.GetProjection(PERSPECTIVE)));
+
+	glBindVertexArray(VAO);
+	glDrawElements(GL_TRIANGLES, objects[0].Indices().size(), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+	
 	glCheckError();
-
 	glfwSwapBuffers(window);
 }
 
 void Renderer::Terminate() {
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
 }
 
@@ -137,34 +138,9 @@ GLFWwindow* Renderer::GetWindow()
 	return window;
 }
 
-void Renderer::SetColors()
+void Renderer::AddObject(Mesh obj)
 {
-	srand(time(0));
-	
-	for (int i = 0; i < 9; i++) {
-		tempCols[i] = (float)(rand() % 101) / 100.0f;
-	}
-	
+	objects.push_back(obj);
 }
 
-void Renderer::DrawTriangle(int shader, float offsetX, float offsetY, float offsetZ, float scale, float flipX, float flipY, float flipZ)
-{
-	int uniform1 = glGetUniformLocation(shaders[shader].ID, "offset");
-	int uniform2 = glGetUniformLocation(shaders[shader].ID, "scaling");
-	int uniform3 = glGetUniformLocation(shaders[shader].ID, "flip");
-	
-	glUniform3f(uniform1, offsetX, offsetY, offsetZ);
-	glUniform3f(uniform3, flipX, flipY, flipZ);
-	glUniform1f(uniform2, scale);
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glBindVertexArray(0);
-	glCheckError();
-}
-
-void Renderer::DrawRectangle(int shader, float offsetX, float offsetY, float offsetZ, float scale)
-{
-	DrawTriangle(shader, offsetX, offsetY, offsetZ, scale);
-	DrawTriangle(shader, offsetX + scale, offsetY + scale, offsetZ , scale, -1.0f, -1.0f);
-}
 

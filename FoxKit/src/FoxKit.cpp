@@ -12,7 +12,7 @@ void ProcessInput(GLFWwindow *window) {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		Render->SetColors();
+		;
 }
 
 int main()

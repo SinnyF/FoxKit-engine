@@ -1,9 +1,9 @@
 #version 460 core
 out vec4 FragColor;
 
-uniform vec3 colSolid;
+in vec3 Pos;
 
 void main()
 {
-    FragColor = vec4(colSolid, 1.0f);
+    FragColor = vec4(Pos + 0.5f, 1.0f);
 }
