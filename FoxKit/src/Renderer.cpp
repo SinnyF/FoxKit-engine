@@ -152,13 +152,10 @@ void Renderer::DrawTriangle(int shader, float offsetX, float offsetY, float offs
 	int uniform1 = glGetUniformLocation(shaders[shader].ID, "offset");
 	int uniform2 = glGetUniformLocation(shaders[shader].ID, "scaling");
 	int uniform3 = glGetUniformLocation(shaders[shader].ID, "flip");
-	glCheckError();
+	
 	glUniform3f(uniform1, offsetX, offsetY, offsetZ);
-	glCheckError();
 	glUniform3f(uniform3, flipX, flipY, flipZ);
-	glCheckError();
 	glUniform1f(uniform2, scale);
-	glCheckError();
 	glBindVertexArray(VAO);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glBindVertexArray(0);
