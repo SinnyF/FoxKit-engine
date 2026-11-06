@@ -21,7 +21,6 @@ mat4 Camera::GetProjection(PROJECTION proj) const
 	case ORTOGRAPHIC:
 		float scale = 8.0f;
 		return ortho(-1.366f * scale, 1.366f * scale, -0.768f * scale, 0.768f * scale, 0.0f, 1000.0f);
-		//return ortho(0.0f, 1366.0f, 0.0f, 768.0f, nearPlane, farPlane);
 		break;
 	}
 }

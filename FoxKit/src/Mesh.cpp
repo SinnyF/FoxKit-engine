@@ -3,94 +3,99 @@
 #include <iostream>
 #include <vector>
 
-void generateSortofSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices, int rings, int slices) {
 
-    if (rings < 3) { std::cout << "no sphere generated. rings value < 3" << std::endl;  return; }
-    if (slices < 4) { std::cout << "no sphere generated. slices value < 4" << std::endl;  return; }
 
-    float PIE = 3.1415f;
+void generateIcoSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices) {
 
     vertices.clear();
     indices.clear();
 
-    float angle_step = 360.0f / slices;
-    float current_angle = 0.0f;
+    vertices = {
+        0.8506508f,0.5257311f,0.0f,
+        0.000000101405476f, 0.8506507f, -0.525731f,
+        0.000000101405476f, 0.8506506f, 0.525731f,
+        0.5257309f, -0.00000006267203f, -0.85065067f,
+        0.52573115f, -0.00000006267203f, 0.85065067f,
+        0.8506508f, -0.5257311f, 0.0f,
+        - 0.52573115f, 0.00000006267203f, -0.85065067f,
+        - 0.8506508f, 0.5257311f, 0.0f,
+        - 0.5257309f, 0.00000006267203f, 0.85065067f,
+        - 0.000000101405476f, -0.8506506f, -0.525731f,
+        - 0.000000101405476f, -0.8506507f, 0.525731f,
+        - 0.8506508f, -0.5257311f, 0.0f
+    };
 
-    // Vertices
-    float y_step = 2.0f / (rings - 1);
-    float y_pos = 1.0f;
+    indices = {
+        0,  1,  2,
+        0,  3,  1,
+        0,  2,  4,
+        3,  0,  5,
+        0,  4,  5,
+        1,  3,  6,
+        1,  7,  2,
+        7,  1,  6,
+        4,  2,  8,
+        7,  8,  2,
+        9,  3,  5,
+        6,  3,  9,
+        5,  4, 10,
+        4,  8, 10,
+        9,  5, 10,
+        7,  6, 11,
+        7, 11,  8,
+        11,  6,  9,
+        8, 11, 10,
+        10, 11,  9
+    };
+    
+}
 
-    for (int ring = 0; ring < rings; ring++) {
+void generateUVSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices, int rings) {
 
-        int iteration_slices = slices;
-        if (ring == 0 || ring == rings - 1) { iteration_slices = 1; }
+    if (rings < 3)
+        rings = 3;
+    int slices = rings / 2;
 
-        for (int i = 0; i < iteration_slices; i++) {
+    float PI = 3.14159f;
 
-            float radius = sinf(acos(y_pos));
+    float deltaLatitude = PI / slices;
+    float deltaLongitude = 2 * PI / rings;
 
-            float x_pos = cosf(current_angle * PIE / 180) * radius;
-            float z_pos = sinf(current_angle * PIE / 180) * radius;
+    for (int i = 0; i <= slices; ++i)
+    {
+        float latitudeAngle = PI / 2 - i * deltaLatitude;
+        for (int j = 0; j <= rings; ++j)
+        {
+            float longitudeAngle = j * deltaLongitude;
+            float x = cosf(latitudeAngle) * cosf(longitudeAngle);
+            float y = cosf(latitudeAngle) * sinf(longitudeAngle);
+            float z = sinf(latitudeAngle);
 
-            vertices.push_back(x_pos);
-            vertices.push_back(z_pos);
-            vertices.push_back(y_pos);
-
-            current_angle += angle_step;
-        }
-
-        y_pos -= y_step;
-        current_angle = 0.0f;
-    }
-
-    std::cout << "Sphere vertex count:" << vertices.size() / 3 << std::endl;
-
-    //Indices
-    unsigned int top_most_index = 0;
-    unsigned int bottom_most_index = vertices.size() / 3 - 1;
-
-    for (int i = 0; i < rings - 1; i++) {
-
-        for (int j = 0; j < slices; j++) {
-
-            unsigned int tl_index = (i - 1) * slices + j + 1;
-            unsigned int tr_index = (i - 1) * slices + j + 1 + 1;
-            unsigned int bl_index = (i + 0) * slices + j + 1;
-            unsigned int br_index = (i + 0) * slices + j + 1 + 1;
-
-            if (j == slices - 1) { // For the seam
-                tr_index = (i - 2) * slices + j + 1 + 1;
-                br_index = (i - 1) * slices + j + 1 + 1;
-            }
-
-            if (i == 0) { // First ring
-
-                indices.push_back(top_most_index);
-                indices.push_back(br_index);
-                indices.push_back(bl_index);
-
-            }
-            else if (i == rings - 2) { // Last ring
-
-                indices.push_back(tr_index);
-                indices.push_back(bottom_most_index);
-                indices.push_back(tl_index);
-
-            }
-            else {
-
-                indices.push_back(tl_index);
-                indices.push_back(br_index);
-                indices.push_back(bl_index);
-
-                indices.push_back(tl_index);
-                indices.push_back(tr_index);
-                indices.push_back(br_index);
-            }
+            vertices.push_back(x);
+            vertices.push_back(y);
+            vertices.push_back(z);
         }
     }
 
-    std::cout << "Sphere triangle count:" << indices.size() / 3 << std::endl;
+    unsigned int k1, k2;
+    for (int i = 0; i < slices; ++i)
+    {
+        k1 = i * (rings + 1);
+        k2 = k1 + rings + 1;
+        for (int j = 0; j < rings; ++j, ++k1, ++k2)
+        {
+            if (i != 0){
+                indices.push_back(k1);
+                indices.push_back(k2);
+                indices.push_back(k1 + 1);
+            }
+            if (i != (slices - 1)){
+                indices.push_back(k1 + 1);
+                indices.push_back(k2);
+                indices.push_back(k2 + 1);
+            }
+        }
+    }
 }
 
 Mesh::Mesh(PRIMITIVES primitive)
@@ -108,18 +113,18 @@ Mesh::Mesh(PRIMITIVES primitive)
 			 0.5f, -0.5f,  0.5f,//7
 		};
 		indexList = {
-			0,1,2,
-			0,2,3,//bottom face
-			4,6,5,
-			4,7,6,//top face
-			4,3,7,
-			4,0,3,//+x
-			5,6,2,
-			5,2,1,//-x
-			7,2,6,
-			7,3,2,//-y
-			4,5,1,
-			4,1,0 //+y
+			0,2,1,
+			0,3,2,//bottom face
+			4,5,6,
+			4,6,7,//top face
+			4,7,3,
+			4,3,0,//+x
+			5,2,6,
+			5,1,2,//-x
+			7,6,2,
+			7,2,3,//-y
+			4,1,5,
+			4,0,1 //+y
 		};
 		break;
 	case PYRAMID:
@@ -131,8 +136,8 @@ Mesh::Mesh(PRIMITIVES primitive)
 			 0.0f,  0.0f,  0.5f //4
 		};
 		indexList = {
-			0,1,2,
-			0,2,3,//bottom face
+			0,2,1,
+			0,3,2,//bottom face
 			0,1,4,
 			1,2,4,
 			2,3,4,
@@ -140,7 +145,8 @@ Mesh::Mesh(PRIMITIVES primitive)
 		};
 		break;
 	case SPHERE:
-		generateSortofSphere(vertexList, indexList, 24, 24);
+        generateUVSphere(vertexList, indexList, 24);
+        //generateIcoSphere(vertexList, indexList);
 		break;
 	}
 }

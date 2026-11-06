@@ -10,6 +10,7 @@
 	static vector<Mesh> objects;
 	static double _time = 0;
 	static PROJECTION proj = PERSPECTIVE;
+	static bool faceCulling = true;
 
 	static float tempCols[9] = {0,0,0,0,0,0,0,0,0};
 
@@ -44,6 +45,26 @@ void Renderer::SwitchProjection() {
 		proj = PERSPECTIVE;
 		break;
 	}
+}
+
+void Renderer::SwitchWireframe()
+{
+	GLint polygonMode;
+	glGetIntegerv(GL_POLYGON_MODE, &polygonMode);
+
+	if (polygonMode == GL_LINE)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	else if (polygonMode == GL_FILL)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+}
+
+void Renderer::SwitchFaceCulling()
+{
+	if(faceCulling)
+		glDisable(GL_CULL_FACE);
+	else
+		glEnable(GL_CULL_FACE);
+	faceCulling = !faceCulling;
 }
 
 void WindowResized(GLFWwindow* window, int width, int height) 
@@ -84,7 +105,10 @@ int Renderer::InitializeRenderer()
 	AddObject(Mesh(PYRAMID));
 	AddObject(Mesh(SPHERE));
 
+	glFrontFace(GL_CCW);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 
 	glCheckError();
 
@@ -106,8 +130,11 @@ void Renderer::Render()
 
 	_time = glfwGetTime();
 
-	camera.position = vec3(8.0f, 6.0f, sin(_time) * 4.0f);
+	//camera.position = vec3(8.0f, 6.0f, sin(_time) * 4.0f);
+	
 
+	
+	
 	mat4 model = mat4(1.0f);
 	model = rotate(model, radians(90.0f * (float)_time), vec3(0,0, 1.0f));
 
@@ -122,7 +149,7 @@ void Renderer::Render()
 
 	model = mat4(1.0f);
 	model = glm::translate(model, vec3(0.0f, 0.0f, 1.0f));
-	model = glm::scale(model, vec3(sin(_time), sin(_time), sin(_time)));
+	model = glm::scale(model, vec3(sin(_time) + 1.0f, sin(_time) + 1.0f, sin(_time) + 1.0f)/2.0f);
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
 	Draw(objects[1]);
 	model = mat4(1.0f);
@@ -138,7 +165,7 @@ void Renderer::Render()
 	model = glm::translate(model, vec3(-2.0f, 3.0f, 0.0f));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
 	Draw(objects[2]);
-
+	
 	glCheckError();
 	glfwSwapBuffers(window);
 }

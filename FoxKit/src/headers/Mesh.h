@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "glm/glm.hpp"
+
 static enum PRIMITIVES
 {
 	CUBE, PYRAMID, SPHERE

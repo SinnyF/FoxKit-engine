@@ -24,6 +24,8 @@ public:
 	static GLFWwindow* GetWindow();
 	static void AddObject(Mesh obj);
 	static void SwitchProjection();
+	static void SwitchWireframe();
+	static void SwitchFaceCulling();
 private:
 	
 	static void Draw(Mesh obj);
