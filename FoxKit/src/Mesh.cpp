@@ -1,9 +1,4 @@
 #include "headers\Mesh.h"
-#include <math.h>
-#include <iostream>
-#include <vector>
-
-
 
 void generateIcoSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices) {
 
@@ -52,8 +47,7 @@ void generateIcoSphere(std::vector<float>& vertices, std::vector<unsigned int>& 
 
 void generateUVSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices, int rings) {
 
-    if (rings < 3)
-        rings = 3;
+    rings = std::max(rings, 3);
     int slices = rings / 2;
 
     float PI = 3.14159f;
@@ -68,12 +62,16 @@ void generateUVSphere(std::vector<float>& vertices, std::vector<unsigned int>& i
         {
             float longitudeAngle = j * deltaLongitude;
             float x = cosf(latitudeAngle) * cosf(longitudeAngle);
-            float y = cosf(latitudeAngle) * sinf(longitudeAngle);
-            float z = sinf(latitudeAngle);
+            float z = cosf(latitudeAngle) * sinf(longitudeAngle);
+            float y = sinf(latitudeAngle);
 
             vertices.push_back(x);
             vertices.push_back(y);
             vertices.push_back(z);
+            vec3 normal = normalize(vec3(x,y,z));
+            vertices.push_back(normal.x);
+            vertices.push_back(normal.y);
+            vertices.push_back(normal.z);
         }
     }
 
@@ -86,13 +84,15 @@ void generateUVSphere(std::vector<float>& vertices, std::vector<unsigned int>& i
         {
             if (i != 0){
                 indices.push_back(k1);
-                indices.push_back(k2);
                 indices.push_back(k1 + 1);
+                indices.push_back(k2);
+                
             }
             if (i != (slices - 1)){
                 indices.push_back(k1 + 1);
-                indices.push_back(k2);
                 indices.push_back(k2 + 1);
+                indices.push_back(k2);
+                
             }
         }
     }
@@ -103,41 +103,62 @@ Mesh::Mesh(PRIMITIVES primitive)
 	switch (primitive) {
 	case CUBE:
 		vertexList = {
-			 0.5f,  0.5f, -0.5f,//0
-			-0.5f,  0.5f, -0.5f,//1
-			-0.5f, -0.5f, -0.5f,//2
-			 0.5f, -0.5f, -0.5f,//3
-			 0.5f,  0.5f,  0.5f,//4
-			-0.5f,  0.5f,  0.5f,//5
-			-0.5f, -0.5f,  0.5f,//6
-			 0.5f, -0.5f,  0.5f,//7
+			 0.5f, -0.5f,  0.5f, 0.0f, -1.0f, 0.0f,//0
+			-0.5f, -0.5f,  0.5f, 0.0f, -1.0f, 0.0f,//1
+			-0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f,//2
+			 0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f,//3
+		
+			 0.5f,  0.5f,  0.5f, 0.0f,  1.0f, 0.0f,//4
+			-0.5f,  0.5f,  0.5f, 0.0f,  1.0f, 0.0f,//5
+			-0.5f,  0.5f, -0.5f, 0.0f,  1.0f, 0.0f,//6
+			 0.5f,  0.5f, -0.5f, 0.0f,  1.0f, 0.0f,//7
+		
+			0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,//8
+			0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,//9
+			0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 0.0f,//10
+			0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 0.0f,//11
+		
+			-0.5f, -0.5f,  0.5f, -1.0f, 0.0f, 0.0f,//12
+			-0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,//13
+			-0.5f,  0.5f,  0.5f, -1.0f, 0.0f, 0.0f,//14
+			-0.5f,  0.5f, -0.5f, -1.0f, 0.0f, 0.0f,//15
+			
+			 0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,//16
+			-0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,//17
+			 0.5f,  0.5f, 0.5f, 0.0f, 0.0f, 1.0f,//18
+			-0.5f,  0.5f, 0.5f, 0.0f, 0.0f, 1.0f,//19
+			
+			 0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f,//20
+			-0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f,//21
+			 0.5f,  0.5f, -0.5f, 0.0f, 0.0f, -1.0f,//22
+			-0.5f,  0.5f, -0.5f, 0.0f, 0.0f, -1.0f,//23
 		};
 		indexList = {
-			0,2,1,
-			0,3,2,//bottom face
-			4,5,6,
-			4,6,7,//top face
-			4,7,3,
-			4,3,0,//+x
-			5,2,6,
-			5,1,2,//-x
-			7,6,2,
-			7,2,3,//-y
-			4,1,5,
-			4,0,1 //+y
+			0,1,2,
+			0,2,3,//bottom face
+			4,6,5,
+			4,7,6,//top face
+			8,10,11,
+			8,9,10,
+			12,15,13,
+			12,14,15,
+			16,19,17,
+			16,18,19,
+			20,21,23,
+			20,23,22,
 		};
 		break;
 	case PYRAMID:
 		vertexList = {
-			 0.5f,  0.5f, -0.5f,//0
-			-0.5f,  0.5f, -0.5f,//1
+			 0.5f, -0.5f,  0.5f,//0
+			-0.5f, -0.5f,  0.5f,//1
 			-0.5f, -0.5f, -0.5f,//2
 			 0.5f, -0.5f, -0.5f,//3
 			 0.0f,  0.0f,  0.5f //4
 		};
 		indexList = {
-			0,2,1,
-			0,3,2,//bottom face
+			0,1,2,
+			0,2,3,//bottom face
 			0,1,4,
 			1,2,4,
 			2,3,4,
@@ -145,8 +166,7 @@ Mesh::Mesh(PRIMITIVES primitive)
 		};
 		break;
 	case SPHERE:
-        generateUVSphere(vertexList, indexList, 24);
-        //generateIcoSphere(vertexList, indexList);
+        generateUVSphere(vertexList, indexList, 64);
 		break;
 	}
 }

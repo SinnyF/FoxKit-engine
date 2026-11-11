@@ -2,9 +2,9 @@
 
 Camera::Camera()
 {
-	position = vec3(8.0f,6.0f,3.0f);
+	position = vec3(8.0f,0.0f,0.0f);
 	target = vec3(0,0,0);
-	up = vec3(0,0,1.0f);
+	up = vec3(0,1.0f,0);
 }
 
 mat4 Camera::GetView() const

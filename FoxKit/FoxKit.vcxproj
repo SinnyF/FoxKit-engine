@@ -133,6 +133,7 @@
   <ItemGroup>
     <ClCompile Include="src\Camera.cpp" />
     <ClCompile Include="src\dependencies\glad.c" />
+    <ClCompile Include="src\Entity.cpp" />
     <ClCompile Include="src\FoxKit.cpp" />
     <ClCompile Include="src\Mesh.cpp" />
     <ClCompile Include="src\Renderer.cpp" />
@@ -140,8 +141,14 @@
   <ItemGroup>
     <ClInclude Include="shader.h" />
     <ClInclude Include="src\headers\Camera.h" />
+    <ClInclude Include="src\headers\Entity.h" />
     <ClInclude Include="src\headers\Mesh.h" />
     <ClInclude Include="src\headers\Renderer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="src\shaders\base.frag" />
+    <Content Include="src\shaders\base.vert" />
+    <Content Include="src\shaders\base2.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
