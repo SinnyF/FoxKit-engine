@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "Entity.h"
 
 static GLFWwindow* window;
 
@@ -20,12 +21,11 @@ public:
 	static void Render();
 	static void Terminate();
 	static GLFWwindow* GetWindow();
-	static void AddObject(Mesh obj);
+	static void AddObject(Entity obj);
 	static void SwitchProjection();
 	static void SwitchWireframe();
 	static void SwitchFaceCulling();
 private:
-	
-	static void Draw(Mesh &obj);
+	static void Draw(Entity &obj);
 };
 

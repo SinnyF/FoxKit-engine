@@ -26,7 +26,7 @@ public:
 	float FOV = 60.0f;
 	float aspectRatio = 1366.0f/768.0f;
 	float nearPlane = 0.1f;
-	float farPlane = 100.0f;
+	float farPlane = 500.0f;
 private:
 	vec3 up;
 };

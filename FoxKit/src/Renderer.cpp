@@ -1,12 +1,12 @@
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "headers/stb_image.h"
 #include "headers\Renderer.h"
 #include <iostream>
 #include <algorithm>
 
-static unsigned int VBO, EBO;
 static vector<Shader> shaders;
 static Camera camera;
-static vector<Mesh> objects;
+static vector<Entity> objects;
 static double _time = 0;
 static PROJECTION proj = PERSPECTIVE;
 static bool faceCulling = true;
@@ -71,94 +71,139 @@ void WindowResized(GLFWwindow* window, int width, int height)
 
 int Renderer::InitializeRenderer()
 {
-		cout << "Initializing Renderer..." << endl;
+	cout << "Initializing Renderer..." << endl;
 
-		glfwInit();
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-		window = glfwCreateWindow(1366, 768, "FoxKit engine", NULL, NULL);
-			
-		if (window == NULL) {
-			cout << "Failed to create window" << endl;
-			glfwTerminate();
-			return 0;
-		}
-		glfwMakeContextCurrent(window);
+	window = glfwCreateWindow(1366, 768, "FoxKit engine", NULL, NULL);
+		
+	if (window == NULL) {
+		cout << "Failed to create window" << endl;
+		glfwTerminate();
+		return 0;
+	}
+	glfwMakeContextCurrent(window);
 
-		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-			cout << "Failed to initialize GLAD" << endl;
-			return 0;
-		}
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+		cout << "Failed to initialize GLAD" << endl;
+		return 0;
+	}
 
-		camera = Camera();
+	camera = Camera();
 
-		glViewport(0, 0, 1366, 768);
-		glfwSetFramebufferSizeCallback(window, WindowResized);
+	glViewport(0, 0, 1366, 768);
+	glfwSetFramebufferSizeCallback(window, WindowResized);
 
-		AddObject(Mesh(SPHERE));
-			AddObject(Mesh(CUBE));
+	AddObject(Entity("sharpcube.obj", "Textures/pavers_diff.png"));
+	objects[0].uniformsf.push_back(make_tuple("specularPower", 32));
+	objects[0].uniformsf.push_back(make_tuple("specularStrength", 0.4));
+	AddObject(Entity("sharpcube.obj", "Textures/rust_diff.png"));
+	AddObject(Entity("bust.obj","Textures/bust_diff.jpg"));
+	objects[2].uniformsf.push_back(make_tuple("specularPower", 256));
+	objects[2].uniformsf.push_back(make_tuple("specularStrength", 0.9));
+	AddObject(Entity("cat.obj","Textures/cat_diff.jpg"));
+	objects[3].uniformsf.push_back(make_tuple("specularPower", 16));
+	objects[3].uniformsf.push_back(make_tuple("specularStrength", 0.6));
+	AddObject(Entity("tinker.obj", "", 1));
+	AddObject(Entity("cube.obj", ""));
+	AddObject(Entity("smoothcube.obj", ""));
+	
+	objects[0].Move(vec3(1,0,5));
+	objects[0].Scale(vec3(0.5));
+	objects[0].Rotate(vec3(30,-60,0));
+	objects[1].Move(vec3(1.5,0,4));
+	objects[1].Rotate(vec3(-30,120,0));
+	objects[1].Scale(vec3(0.5));
+	objects[2].Move(vec3(0,0,0));
+	objects[2].Scale(vec3(10));
+	objects[2].Rotate(vec3(0,75,0));
+	objects[3].Move(vec3(2,0,1));
+	objects[3].Scale(vec3(10));
+	objects[4].Move(vec3(100,-20,0));
+	objects[4].Scale(vec3(1));
+	objects[4].Rotate(vec3(-90,0,-90));
 
-		glFrontFace(GL_CCW);
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
+	glFrontFace(GL_CCW);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 
-		glCheckError();
+	glCheckError();
 
-		shaders.push_back( Shader("src/shaders/base.vert", "src/shaders/base2.frag"));
-		shaders[0].use();
-		glCheckError();
-		return 1;
+	shaders.push_back( Shader("src/shaders/base.vert", "src/shaders/base2.frag"));
+	shaders.push_back( Shader("src/shaders/base.vert", "src/shaders/base.frag"));
+	shaders[0].use();
+	
+	int ambientLightLocation = glGetUniformLocation(shaders[0].ID, "ambientLight");
+	int lightColorLocation = glGetUniformLocation(shaders[0].ID, "lightColor");
+	int colorLocation = glGetUniformLocation(shaders[0].ID, "color");
+	glCheckError();
+	glUniform3f(lightColorLocation, 1.0f,1.0f,1.0f);
+	glUniform3f(ambientLightLocation, 0.2f,0.2f,0.2f);
+	glUniform3f(colorLocation, 0.0f,1.0f,1.0f);
+	glCheckError();
+	return 1;
 }
 
 void Renderer::Render()
 {
-		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-		shaders[0].use();
-		int modelLocation = glGetUniformLocation(shaders[0].ID, "model");
-		int normalMLocation = glGetUniformLocation(shaders[0].ID, "normalM");
-		int viewLocation = glGetUniformLocation(shaders[0].ID, "view");
-		int projectionLocation = glGetUniformLocation(shaders[0].ID, "projection");
-		int viewPosLocation = glGetUniformLocation(shaders[0].ID, "viewPos");
-		int ambientLightLocation = glGetUniformLocation(shaders[0].ID, "ambientLight");
-		int lightColorLocation = glGetUniformLocation(shaders[0].ID, "lightColor");
-		int colorLocation = glGetUniformLocation(shaders[0].ID, "color");
-		
-		glUniform3f(lightColorLocation, 1.0f,1.0f,1.0f);
-		glUniform3f(ambientLightLocation, 0.2f,0.2f,0.2f);
-		glUniform3f(colorLocation, 0.0f,1.0f,1.0f);
-		_time = glfwGetTime();
-		
-		int lightLocation = glGetUniformLocation(shaders[0].ID, "lightPos");
-		glUniform3f(lightLocation, sin(_time)*6, 2.0f, cos(_time)*6);
-
-		mat4 model = mat4(1.0f);
-		model = rotate(model, radians(15.0f * (float)_time), vec3(0,1.0f, 0));
-		
-		camera.position = vec3(4, 2 ,4);
-		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera.GetView()));
-		glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(camera.GetProjection(proj)));
-		glUniform3f(viewPosLocation, camera.position.x, camera.position.y, camera.position.z);
-		mat3 normalMatrix = transpose(inverse(model));
-		glUniformMatrix3fv(normalMLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
-		Draw(objects[1]);
-		glCheckError();
-		glfwSwapBuffers(window);
+	shaders[0].use();
+	glClearColor(0.f, 0.5f, 0.6f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+	glCheckError();
+	
+	int viewLocation = glGetUniformLocation(shaders[0].ID, "view");
+	int projectionLocation = glGetUniformLocation(shaders[0].ID, "projection");
+	int viewPosLocation = glGetUniformLocation(shaders[0].ID, "viewPos");
+	int lightLocation = glGetUniformLocation(shaders[0].ID, "lightPos");
+	glUniform3f(lightLocation, 6, 2.0f, 6);
+	glCheckError();
+	camera.position = vec3(sin(_time * 0.5) * 8, 2 ,cos(_time * 0.5) * 8);
+	camera.LookAt(vec3(0,3,0), vec3(0,1,0));
+	glCheckError();
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera.GetView()));
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(camera.GetProjection(proj)));
+	glUniform3f(viewPosLocation, camera.position.x, camera.position.y, camera.position.z);
+	glCheckError();
+	
+	shaders[1].use();
+	viewLocation = glGetUniformLocation(shaders[1].ID, "view");
+	projectionLocation = glGetUniformLocation(shaders[1].ID, "projection");
+	viewPosLocation = glGetUniformLocation(shaders[1].ID, "viewPos");
+	glCheckError();
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera.GetView()));
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(camera.GetProjection(proj)));
+	glUniform3f(viewPosLocation, camera.position.x, camera.position.y, camera.position.z);
+	glCheckError();
+	_time = glfwGetTime();
+	int timeLocation = glGetUniformLocation(shaders[1].ID, "time");
+	glUniform1f(timeLocation, _time);
+	glCheckError();
+	
+	for (auto obj : objects)
+	{
+		Draw(obj);
+	}
+	
+	glCheckError();
+	glfwSwapBuffers(window);
 }
 
 void Renderer::Terminate() 
 {
-		for (Mesh& object : objects)
-		{
-			glDeleteVertexArrays(1, &object.VAO);
-		}
-		glDeleteBuffers(1, &VBO);
-		glfwTerminate();
+	for (auto obj : objects)
+	{
+		glDeleteTextures(1, &obj.textureID);
+	}
+	for (auto obj: shaders)
+	{
+		glDeleteShader(obj.ID);
+	}
+	Mesh::CleanUP();
+	glfwTerminate();
 }
 
 GLFWwindow* Renderer::GetWindow()
@@ -166,37 +211,36 @@ GLFWwindow* Renderer::GetWindow()
 	return window;
 }
 
-void Renderer::AddObject(Mesh obj)
+void Renderer::AddObject(Entity obj)
 {
-		glGenVertexArrays(1, &obj.VAO);
-		glGenBuffers(1, &VBO);
-		glGenBuffers(1, &EBO);
-
-		glCheckError();
-		glBindVertexArray(obj.VAO);
-		
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, obj.Vertices().size() * sizeof(float), &obj.Vertices()[0], GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.Indices().size() * sizeof(unsigned int), &obj.Indices()[0], GL_STATIC_DRAW);
-		//Position attributes
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		//Normal attributes
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
-		glEnableVertexAttribArray(1);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-		glBindVertexArray(0);
-		objects.push_back(obj);
+	Mesh::LoadMesh(obj.modelPath);
+	if (!obj.texturePath.empty())
+		obj.textureID = Mesh::LoadTexture(obj.texturePath);
+	glCheckError();
+	objects.push_back(obj);
 }
 
-void Renderer::Draw(Mesh &obj)
+void Renderer::Draw(Entity &obj)
 {
-		glBindVertexArray(obj.VAO);
-		glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(obj.Indices().size()), GL_UNSIGNED_INT, nullptr);
-		glBindVertexArray(0);
+	shaders[obj.shaderID].use();
+	for (auto tuple : obj.uniformsf)
+	{
+		int location = glGetUniformLocation(shaders[obj.shaderID].ID, get<0>(tuple).c_str());
+		glUniform1f(location, get<1>(tuple));
+	}
+	int modelLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "model");
+	int normalMLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "normalM");
+	glCheckError();
+	mat3 normalM = transpose(inverse(obj.modelMatrix));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(obj.modelMatrix));
+	glUniformMatrix3fv(normalMLocation, 1, GL_FALSE, glm::value_ptr(normalM));
+	glCheckError();
+	Mesh* mesh = Mesh::LoadMesh(obj.modelPath);
+	if (!obj.texturePath.empty())
+		glBindTexture(GL_TEXTURE_2D, obj.textureID);
+	glBindVertexArray(mesh->VAO);
+	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh->Indices().size()), GL_UNSIGNED_INT, nullptr);
+	glBindVertexArray(0);
+	glCheckError();
 }
 

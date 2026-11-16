@@ -1,10 +1,11 @@
 #pragma once
 #include <vector>
 #include "glm/glm.hpp"
-#include "Mesh.h"
-#include <math.h>
+#include <glad/glad.h>
+#include <glfw3.h>
 #include <iostream>
-
+#include <map>
+#include <string>
 static enum PRIMITIVES
 {
 	CUBE, PYRAMID, SPHERE
@@ -16,14 +17,19 @@ class Mesh
 {
 public:
 	Mesh(PRIMITIVES primitive);
+	static Mesh* LoadMesh(string path);
+	static unsigned int LoadTexture(string path);
 	vector<float> Vertices();
 	vector<unsigned int> Indices();
-	vec3 position = vec3(0,0,0);
+	static void CleanUP();
+	Mesh();
 	unsigned int VAO;
-	int shaderID;
 private:
+	
+	Mesh(string path, PRIMITIVES primitive = CUBE);
 	vector<float> vertexList;
 	vector<unsigned int> indexList;
-	vector<Mesh> meshes;
+	static map<string, Mesh> loadedMeshes;
+	void setBuffers();
 };
 
