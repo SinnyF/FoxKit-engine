@@ -1,33 +1,29 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "Entity.h"
 
-using namespace glm;
-
-static enum PROJECTION
+enum PROJECTION
 {
 	PERSPECTIVE,
 	ORTOGRAPHIC
 };
 
-class Camera
+using namespace glm;
+
+class Camera : public Entity
 {
 public:
-	Camera();
-
+	Camera(int _width, int _height, float _fov = 60.0f, float _nearPlane = 0.1f, float _farPlane = 500.0f);
+	void Resize(int _width, int _height);
 	mat4 GetView() const;
 	mat4 GetProjection(PROJECTION proj) const;
-
-	void LookAt(const vec3& target, const vec3& up);
-
-	vec3 position;
+	void LookAt(const vec3& _target, const vec3& _up);
+	
 	vec3 target;
-
-	float FOV = 60.0f;
-	float aspectRatio = 1366.0f/768.0f;
-	float nearPlane = 0.1f;
-	float farPlane = 500.0f;
+	
 private:
 	vec3 up;
+	float FOV, aspectRatio, nearPlane, farPlane;
 };
 

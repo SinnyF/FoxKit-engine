@@ -1,15 +1,17 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "headers/stb_image.h"
-#include "headers\Renderer.h"
+#include "headers/Renderer.h"
 #include <iostream>
 #include <algorithm>
 
-static vector<Shader> shaders;
-static Camera camera;
-static vector<Entity> objects;
-static double _time = 0;
-static PROJECTION proj = PERSPECTIVE;
-static bool faceCulling = true;
+vector<Shader> Renderer::shaders;
+vector<Camera*> Renderer::cameras;
+
+GLFWwindow* Renderer::window;
+PROJECTION Renderer::proj = PERSPECTIVE;
+
+double Renderer::_time = 0;
+bool Renderer::faceCulling = true;
 
 GLenum glCheckError_(const char* file, int line)
 {
@@ -64,12 +66,13 @@ void Renderer::SwitchFaceCulling()
 		faceCulling = !faceCulling;
 }
 
-void WindowResized(GLFWwindow* window, int width, int height) 
+void Renderer::WindowResized(GLFWwindow* window,const int width,const int height) 
 {
 	glViewport(0,0,width,height);
+	cameras[0]->Resize(width,height);
 }
 
-int Renderer::InitializeRenderer()
+int Renderer::InitializeRenderer(const int width,const int height)
 {
 	cout << "Initializing Renderer..." << endl;
 
@@ -78,7 +81,7 @@ int Renderer::InitializeRenderer()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	window = glfwCreateWindow(1366, 768, "FoxKit engine", NULL, NULL);
+	window = glfwCreateWindow(width, height, "FoxKit engine", NULL, NULL);
 		
 	if (window == NULL) {
 		cout << "Failed to create window" << endl;
@@ -91,40 +94,7 @@ int Renderer::InitializeRenderer()
 		cout << "Failed to initialize GLAD" << endl;
 		return 0;
 	}
-
-	camera = Camera();
-
-	glViewport(0, 0, 1366, 768);
-	glfwSetFramebufferSizeCallback(window, WindowResized);
-
-	AddObject(Entity("sharpcube.obj", "Textures/pavers_diff.png"));
-	objects[0].uniformsf.push_back(make_tuple("specularPower", 32));
-	objects[0].uniformsf.push_back(make_tuple("specularStrength", 0.4));
-	AddObject(Entity("sharpcube.obj", "Textures/rust_diff.png"));
-	AddObject(Entity("bust.obj","Textures/bust_diff.jpg"));
-	objects[2].uniformsf.push_back(make_tuple("specularPower", 256));
-	objects[2].uniformsf.push_back(make_tuple("specularStrength", 0.9));
-	AddObject(Entity("cat.obj","Textures/cat_diff.jpg"));
-	objects[3].uniformsf.push_back(make_tuple("specularPower", 16));
-	objects[3].uniformsf.push_back(make_tuple("specularStrength", 0.6));
-	AddObject(Entity("tinker.obj", "", 1));
-	AddObject(Entity("cube.obj", ""));
-	AddObject(Entity("smoothcube.obj", ""));
-	
-	objects[0].Move(vec3(1,0,5));
-	objects[0].Scale(vec3(0.5));
-	objects[0].Rotate(vec3(30,-60,0));
-	objects[1].Move(vec3(1.5,0,4));
-	objects[1].Rotate(vec3(-30,120,0));
-	objects[1].Scale(vec3(0.5));
-	objects[2].Move(vec3(0,0,0));
-	objects[2].Scale(vec3(10));
-	objects[2].Rotate(vec3(0,75,0));
-	objects[3].Move(vec3(2,0,1));
-	objects[3].Scale(vec3(10));
-	objects[4].Move(vec3(100,-20,0));
-	objects[4].Scale(vec3(1));
-	objects[4].Rotate(vec3(-90,0,-90));
+	glViewport(0, 0, width, height);
 
 	glFrontFace(GL_CCW);
 	glEnable(GL_DEPTH_TEST);
@@ -148,9 +118,8 @@ int Renderer::InitializeRenderer()
 	return 1;
 }
 
-void Renderer::Render()
+void Renderer::Render(const vector<Entity> &objects)
 {
-	shaders[0].use();
 	glClearColor(0.f, 0.5f, 0.6f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	glCheckError();
@@ -161,12 +130,11 @@ void Renderer::Render()
 	int lightLocation = glGetUniformLocation(shaders[0].ID, "lightPos");
 	glUniform3f(lightLocation, 6, 2.0f, 6);
 	glCheckError();
-	camera.position = vec3(sin(_time * 0.5) * 8, 2 ,cos(_time * 0.5) * 8);
-	camera.LookAt(vec3(0,3,0), vec3(0,1,0));
+	
 	glCheckError();
-	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera.GetView()));
-	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(camera.GetProjection(proj)));
-	glUniform3f(viewPosLocation, camera.position.x, camera.position.y, camera.position.z);
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetView()));
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetProjection(proj)));
+	glUniform3f(viewPosLocation, cameras[0]->getPosition().x, cameras[0]->getPosition().y, cameras[0]->getPosition().z);
 	glCheckError();
 	
 	shaders[1].use();
@@ -174,13 +142,13 @@ void Renderer::Render()
 	projectionLocation = glGetUniformLocation(shaders[1].ID, "projection");
 	viewPosLocation = glGetUniformLocation(shaders[1].ID, "viewPos");
 	glCheckError();
-	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera.GetView()));
-	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(camera.GetProjection(proj)));
-	glUniform3f(viewPosLocation, camera.position.x, camera.position.y, camera.position.z);
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetView()));
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetProjection(proj)));
+	glUniform3f(viewPosLocation, cameras[0]->getPosition().x, cameras[0]->getPosition().y, cameras[0]->getPosition().z);
 	glCheckError();
 	_time = glfwGetTime();
 	int timeLocation = glGetUniformLocation(shaders[1].ID, "time");
-	glUniform1f(timeLocation, _time);
+	glUniform1f(timeLocation, (float)_time);
 	glCheckError();
 	
 	for (auto obj : objects)
@@ -192,7 +160,7 @@ void Renderer::Render()
 	glfwSwapBuffers(window);
 }
 
-void Renderer::Terminate() 
+void Renderer::Terminate(const vector<Entity> &objects) 
 {
 	for (auto obj : objects)
 	{
@@ -211,7 +179,7 @@ GLFWwindow* Renderer::GetWindow()
 	return window;
 }
 
-void Renderer::AddObject(Entity obj)
+void Renderer::AddObject(Entity obj, vector<Entity> &objects)
 {
 	Mesh::LoadMesh(obj.modelPath);
 	if (!obj.texturePath.empty())
@@ -230,6 +198,7 @@ void Renderer::Draw(Entity &obj)
 	}
 	int modelLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "model");
 	int normalMLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "normalM");
+	int textureBoolLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "textureOn");
 	glCheckError();
 	mat3 normalM = transpose(inverse(obj.modelMatrix));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(obj.modelMatrix));
@@ -237,9 +206,14 @@ void Renderer::Draw(Entity &obj)
 	glCheckError();
 	Mesh* mesh = Mesh::LoadMesh(obj.modelPath);
 	if (!obj.texturePath.empty())
+	{
 		glBindTexture(GL_TEXTURE_2D, obj.textureID);
+		glUniform1i(textureBoolLocation, true);
+	}
+	else
+		glUniform1i(textureBoolLocation, false);
 	glBindVertexArray(mesh->VAO);
-	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh->Indices().size()), GL_UNSIGNED_INT, nullptr);
+	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh->indicies), GL_UNSIGNED_INT, nullptr);
 	glBindVertexArray(0);
 	glCheckError();
 }

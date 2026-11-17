@@ -6,30 +6,27 @@
 #include <iostream>
 #include <map>
 #include <string>
-static enum PRIMITIVES
+
+enum PRIMITIVES
 {
-	CUBE, PYRAMID, SPHERE
+    CUBE, PYRAMID, SPHERE
 };
 
 using namespace std;
 using namespace glm;
+
 class Mesh
 {
 public:
-	Mesh(PRIMITIVES primitive);
-	static Mesh* LoadMesh(string path);
-	static unsigned int LoadTexture(string path);
-	vector<float> Vertices();
-	vector<unsigned int> Indices();
-	static void CleanUP();
-	Mesh();
-	unsigned int VAO;
-private:
-	
-	Mesh(string path, PRIMITIVES primitive = CUBE);
-	vector<float> vertexList;
-	vector<unsigned int> indexList;
-	static map<string, Mesh> loadedMeshes;
-	void setBuffers();
-};
+    Mesh(PRIMITIVES primitive);
+    static Mesh* LoadMesh(const string& path);
+    static unsigned int LoadTexture(const string& path);
+    static void CleanUP();
+    Mesh();
+    unsigned int VAO = 0, indicies = 0;
 
+private:
+    Mesh(string path);
+    static map<string, Mesh> loadedMeshes;
+    void setBuffers(const vector<float>& vertexList, const vector<unsigned int>& indexList);
+};

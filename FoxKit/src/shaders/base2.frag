@@ -9,15 +9,18 @@ uniform vec3 color;
 uniform float specularPower = 256;
 uniform float specularStrength = 1;
 uniform sampler2D diffTexture;
+uniform bool textureOn;
 
 in vec3 fPos;
 in vec3 fWorldPos;
 in vec3 fNormal;
 in vec2 UV;
 
-void main()
-{
-    FragColor = texture2D(diffTexture, UV);
+void main(){
+    if(textureOn)
+        FragColor = texture2D(diffTexture, UV);
+    else
+        FragColor = vec4(color, 1.0);
     vec3 lightDir = normalize(lightPos - fWorldPos);
     vec3 diffuse = max(dot(fNormal,lightDir), 0.0) * lightColor;
     vec3 viewDir = normalize(viewPos - fWorldPos);

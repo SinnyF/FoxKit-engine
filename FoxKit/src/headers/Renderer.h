@@ -11,21 +11,27 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "Entity.h"
 
-static GLFWwindow* window;
-
 class Renderer
 {
 
 public: 
-	static int InitializeRenderer();
-	static void Render();
-	static void Terminate();
+	static void WindowResized(GLFWwindow* window,int width, int height);
+	static int InitializeRenderer(int width,int height);
+	static void Render(const vector<Entity> &objects);
+	static void Terminate(const vector<Entity> &objects);
 	static GLFWwindow* GetWindow();
-	static void AddObject(Entity obj);
+	static void AddObject(Entity obj, vector<Entity> &objects);
 	static void SwitchProjection();
 	static void SwitchWireframe();
 	static void SwitchFaceCulling();
+	static vector<Camera*> cameras;
+	
 private:
 	static void Draw(Entity &obj);
+	static vector<Shader> shaders;
+	static double _time;
+	static PROJECTION proj;
+	static bool faceCulling;
+	static GLFWwindow* window;
 };
 

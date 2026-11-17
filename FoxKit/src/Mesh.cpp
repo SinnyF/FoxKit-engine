@@ -6,7 +6,7 @@
 #include "headers/CustomReader.h"
 #include "headers/stb_image.h"
 
-map<string, Mesh> Mesh::loadedMeshes = map<string, Mesh>();
+map<string, Mesh> Mesh::loadedMeshes;
 
 void generateIcoSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices) {
 
@@ -60,8 +60,8 @@ void generateUVSphere(std::vector<float>& vertices, std::vector<unsigned int>& i
 
     float PI = 3.14159f;
 
-    float deltaLatitude = PI / slices;
-    float deltaLongitude = 2 * PI / rings;
+    float deltaLatitude = PI / (float)slices;
+    float deltaLongitude = 2 * PI / (float)rings;
 
     for (int i = 0; i <= slices; ++i)
     {
@@ -80,8 +80,8 @@ void generateUVSphere(std::vector<float>& vertices, std::vector<unsigned int>& i
             vertices.push_back(normal.x);
             vertices.push_back(normal.y);
             vertices.push_back(normal.z);
-        	vertices.push_back((float)j/rings);
-        	vertices.push_back((float)i/slices);
+        	vertices.push_back((float)j/(float)rings);
+        	vertices.push_back((float)i/(float)slices);
         	
         }
     }
@@ -111,6 +111,8 @@ void generateUVSphere(std::vector<float>& vertices, std::vector<unsigned int>& i
 
 Mesh::Mesh(PRIMITIVES primitive)
 {
+	vector<float> vertexList;
+	vector<unsigned int> indexList;
 	switch (primitive) {
 	case CUBE:
 		vertexList = {
@@ -180,19 +182,20 @@ Mesh::Mesh(PRIMITIVES primitive)
         generateUVSphere(vertexList, indexList, 64);
 		break;
 	}
+	setBuffers(vertexList, indexList);
+	indicies = indexList.size();
 }
 
-Mesh* Mesh::LoadMesh(string path)
+Mesh* Mesh::LoadMesh(const string &path)
 {
 	if (loadedMeshes.find(path) == loadedMeshes.end())
 	{
 		loadedMeshes[path] = Mesh(path);
-		loadedMeshes[path].setBuffers();
 	}
 	return &loadedMeshes[path];
 }
 
-unsigned int Mesh::LoadTexture(string path)
+unsigned int Mesh::LoadTexture(const string &path)
 {
 	int width, height, channels; 
 	unsigned int texture;
@@ -211,170 +214,99 @@ unsigned int Mesh::LoadTexture(string path)
 	return texture;
 }
 
-Mesh::Mesh()
+Mesh::Mesh() = default;
+
+Mesh::Mesh(string path)
 {
+	cout << "Loading model: " << path << endl;
+	auto start = chrono::high_resolution_clock::now();
+    tinyobj::ObjReaderConfig readerConfig;
+    readerConfig.mtl_search_path = "./";
+    readerConfig.triangulate = true;
+    tinyobj::ObjReader reader;
 	
-}
+	vector<float> vertexList;
+	vector<unsigned int> indexList;
 
-Mesh::Mesh(string path, PRIMITIVES primitive)
-{
-	//Switch to 3rd Party loader
-	if(primitive == CUBE)
-	{
-		cout << "Loading model: " << path << endl;
-		auto start = chrono::high_resolution_clock::now();
-	    tinyobj::ObjReaderConfig readerConfig;
-	    readerConfig.mtl_search_path = "./";
-	    readerConfig.triangulate = true;
-	    tinyobj::ObjReader reader;
-
-	    if (!reader.ParseFromFile(path, readerConfig)) {
-	        if (!reader.Error().empty()) {
-	            std::cerr << "TinyObjReader: " << reader.Error() << std::endl;
-	        }
-	        exit(1);
-	    }
-
-	    if (!reader.Warning().empty()) {
-	        std::cout << "TinyObjReader: " << reader.Warning() << std::endl;
-	    }
-
-	    auto& attrib = reader.GetAttrib();
-	    auto& shapes = reader.GetShapes();
-		//update to unordered_map for faster lookup?
-	    std::map<std::tuple<int, int, int>, unsigned int> uniqueVertices;
-		unsigned int newIndex = 0;
-		int dupecount = 0, vertexcount = 0;
-	    for (size_t s = 0; s < shapes.size(); s++) {
-	        size_t index_offset = 0;
-	        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-	            size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
-        		
-	            for (size_t v = 0; v < fv; v++) {
-	                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-	                auto key = std::make_tuple(idx.vertex_index, idx.normal_index, idx.texcoord_index);
-
-	                //Check if this index combination already exists, if we get the default return we didn't get a match
-            		//and need to create new vertex attributes
-	                if (uniqueVertices.find(key) == uniqueVertices.end()) {
-	                    uniqueVertices[key] = newIndex;
-                		newIndex++;
-	                    //Vertex
-	                    vertexList.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 0]);
-	                    vertexList.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 1]);
-	                    vertexList.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 2]);
-
-	                    //Normals default to 0 if not defined in .obj
-	                    if (idx.normal_index >= 0) {
-	                        vertexList.push_back(attrib.normals[3 * size_t(idx.normal_index) + 0]);
-	                        vertexList.push_back(attrib.normals[3 * size_t(idx.normal_index) + 1]);
-	                        vertexList.push_back(attrib.normals[3 * size_t(idx.normal_index) + 2]);
-	                    } else {
-	                        vertexList.push_back(0.0f);
-	                        vertexList.push_back(0.0f);
-	                        vertexList.push_back(0.0f);
-	                    }
-
-	                    //UV also set to 0 if missing
-	                    if (idx.texcoord_index >= 0) {
-	                        vertexList.push_back(attrib.texcoords[2 * size_t(idx.texcoord_index) + 0]);
-	                        vertexList.push_back(attrib.texcoords[2 * size_t(idx.texcoord_index) + 1]);
-	                    } else {
-	                        vertexList.push_back(0.0f);
-	                        vertexList.push_back(0.0f);
-	                    }
-	                }
-	            	else
-	            	{
-	            		dupecount++;
-	            	}
-	            	vertexcount++;
-	                //Push the index
-	                indexList.push_back(uniqueVertices[key]);
-	            }
-	            index_offset += fv;
-	        }
-	    }
-		auto stop = chrono::high_resolution_clock::now();
-		
-		auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
-		cout << "tinyobj loader done" << endl;
-		cout << "Time taken: " << duration.count() << " microseconds" << endl;
-		cout <<"dupe count: " << dupecount << endl;
-		cout <<"vertex count: " << vertexcount << endl;
-	}
-	//Custom .obj loader
-	else
-	{
-		cout << "Loading model: " << path << endl;
-		auto start = chrono::high_resolution_clock::now();
-	    
-		vector<CustomReader::Indexes> data;
-		vector<float> vertices;
-		vector<float> normals;
-		vector<float> uvs;
-		CustomReader::ReadFile(data, path, vertices, normals, uvs);
-
-		//update to unordered_map for faster lookup?
-	    std::map<std::tuple<int, int, int>, unsigned int> uniqueVertices;
-		unsigned int newIndex = 0;
-		int dupecount = 0, vertexcount = 0;
-        		
-        for (size_t v = 0; v < data.size(); v++) {
-            auto key = std::make_tuple(data[v].position, data[v].normal, data[v].uv);
-
-            //Check if this index combination already exists, if we get the default return we didn't get a match
-            //and need to create new vertex attributes
-            if (uniqueVertices.find(key) == uniqueVertices.end()) {
-                uniqueVertices[key] = newIndex;
-                newIndex++;
-                //Vertex
-            	int fixedID = (data[v].position -1) * 3;
-                vertexList.push_back(vertices[fixedID + 0]);
-                vertexList.push_back(vertices[fixedID + 1]);
-                vertexList.push_back(vertices[fixedID + 2]);
-
-                //Normals default to 0 if not defined in .obj
-                if (data[v].normal >= 0) {
-                	fixedID = (data[v].normal -1) * 3;
-                    vertexList.push_back(normals[fixedID + 0]);
-                    vertexList.push_back(normals[fixedID + 1]);
-                    vertexList.push_back(normals[fixedID + 2]);
-                } else {
-                    vertexList.push_back(0.0f);
-                    vertexList.push_back(0.0f);
-                    vertexList.push_back(0.0f);
-                }
-
-                //UV also set to 0 if missing
-                if (data[v].uv >= 0) {
-                	fixedID = (data[v].uv -1) * 2;
-                    vertexList.push_back(uvs[fixedID + 0]);
-                    vertexList.push_back(uvs[fixedID + 1]);
-                } else {
-                    vertexList.push_back(0.0f);
-                    vertexList.push_back(0.0f);
-                }
-            }
-            else
-            {
-	            dupecount++;
-            }
-            vertexcount++;
-            //Push the index
-            indexList.push_back(uniqueVertices[key]);
+    if (!reader.ParseFromFile(path, readerConfig)) {
+        if (!reader.Error().empty()) {
+            std::cerr << "TinyObjReader: " << reader.Error() << std::endl;
         }
-		auto stop = chrono::high_resolution_clock::now();
-		
-		auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
-		cout <<"Custom loader done" << endl;
-		cout << "Time taken: " << duration.count() << " microseconds" << endl;
-		cout <<"dupe count: " << dupecount << endl;
-		cout <<"vertex count: " << vertexcount << endl;
-	}
+        exit(1);
+    }
+
+    if (!reader.Warning().empty()) {
+        std::cout << "TinyObjReader: " << reader.Warning() << std::endl;
+    }
+
+    auto& attrib = reader.GetAttrib();
+    auto& shapes = reader.GetShapes();
+	//update to unordered_map for faster lookup?
+    std::map<std::tuple<int, int, int>, unsigned int> uniqueVertices;
+	unsigned int newIndex = 0;
+	int dupecount = 0, vertexcount = 0;
+    for (auto &shape : shapes) {
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+            size_t fv = size_t(shape.mesh.num_face_vertices[f]);
+        	
+            for (size_t v = 0; v < fv; v++) {
+                tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+                auto key = std::make_tuple(idx.vertex_index, idx.normal_index, idx.texcoord_index);
+
+                //Check if this index combination already exists, if we get the default return we didn't get a match
+            	//and need to create new vertex attributes
+                if (uniqueVertices.find(key) == uniqueVertices.end()) {
+                    uniqueVertices[key] = newIndex;
+                	newIndex++;
+                    //Vertex
+                    vertexList.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 0]);
+                    vertexList.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 1]);
+                    vertexList.push_back(attrib.vertices[3 * size_t(idx.vertex_index) + 2]);
+
+                    //Normals default to 0 if not defined in .obj
+                    if (idx.normal_index >= 0) {
+                        vertexList.push_back(attrib.normals[3 * size_t(idx.normal_index) + 0]);
+                        vertexList.push_back(attrib.normals[3 * size_t(idx.normal_index) + 1]);
+                        vertexList.push_back(attrib.normals[3 * size_t(idx.normal_index) + 2]);
+                    } else {
+                        vertexList.push_back(0.0f);
+                        vertexList.push_back(0.0f);
+                        vertexList.push_back(0.0f);
+                    }
+
+                    //UV also set to 0 if missing
+                    if (idx.texcoord_index >= 0) {
+                        vertexList.push_back(attrib.texcoords[2 * size_t(idx.texcoord_index) + 0]);
+                        vertexList.push_back(attrib.texcoords[2 * size_t(idx.texcoord_index) + 1]);
+                    } else {
+                        vertexList.push_back(0.0f);
+                        vertexList.push_back(0.0f);
+                    }
+                }
+	            else
+	            {
+	            	dupecount++;
+	            }
+	            vertexcount++;
+                //Push the index
+                indexList.push_back(uniqueVertices[key]);
+            }
+            index_offset += fv;
+        }
+    	setBuffers(vertexList, indexList);
+    	indicies = indexList.size();
+    }
+	auto stop = chrono::high_resolution_clock::now();
+	
+	auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
+	cout << "tinyobj loader done" << endl;
+	cout << "Time taken: " << duration.count() << " microseconds" << endl;
+	cout <<"dupe count: " << dupecount << endl;
+	cout <<"vertex count: " << vertexcount << endl;
 }
 
-void Mesh::setBuffers()
+void Mesh::setBuffers(const vector<float> &vertexList, const vector<unsigned int> &indexList)
 {
 	unsigned int VBO, EBO;
 	glGenVertexArrays(1, &VAO);
@@ -382,12 +314,11 @@ void Mesh::setBuffers()
 	glGenBuffers(1, &EBO);
 	
 	glBindVertexArray(VAO);
-	
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, Vertices().size() * sizeof(float), &Vertices()[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertexList.size() * sizeof(float), &vertexList[0], GL_STATIC_DRAW);
 	
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, Indices().size() * sizeof(unsigned int), &Indices()[0], GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexList.size() * sizeof(unsigned int), &indexList[0], GL_STATIC_DRAW);
 	//Position attributes
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
@@ -403,23 +334,11 @@ void Mesh::setBuffers()
 	glDeleteBuffers(1, &EBO);
 }
 
-vector<float> Mesh::Vertices()
-{
-	return vertexList;
-}
-
-vector<unsigned int> Mesh::Indices()
-{
-	return indexList;
-}
-
 void Mesh::CleanUP()
 {
 	for (auto &mesh : loadedMeshes)
 	{
 		glDeleteBuffers(1, &mesh.second.VAO);
-		mesh.second.indexList.clear();
-		mesh.second.vertexList.clear();
 	}
 	loadedMeshes.clear();
 }
