@@ -119,7 +119,7 @@ int Renderer::InitializeRenderer(const int width,const int height)
 	return 1;
 }
 
-void Renderer::Render(const vector<Entity> &objects)
+void Renderer::Render(const vector<Entity*> &objects)
 {
 	glClearColor(0.f, 0.5f, 0.6f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -136,7 +136,7 @@ void Renderer::Render(const vector<Entity> &objects)
 	glCheckError();
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetView()));
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetProjection(proj)));
-	glUniform3f(viewPosLocation, cameras[0]->getPosition().x, cameras[0]->getPosition().y, cameras[0]->getPosition().z);
+	glUniform3f(viewPosLocation, cameras[0]->getWorldPosition().x, cameras[0]->getWorldPosition().y, cameras[0]->getWorldPosition().z);
 	glCheckError();
 	
 	shaders[1].use();
@@ -146,7 +146,7 @@ void Renderer::Render(const vector<Entity> &objects)
 	glCheckError();
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetView()));
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetProjection(proj)));
-	glUniform3f(viewPosLocation, cameras[0]->getPosition().x, cameras[0]->getPosition().y, cameras[0]->getPosition().z);
+	glUniform3f(viewPosLocation, cameras[0]->getWorldPosition().x, cameras[0]->getWorldPosition().y, cameras[0]->getWorldPosition().z);
 	glCheckError();
 	_time = glfwGetTime();
 	int timeLocation = glGetUniformLocation(shaders[1].ID, "time");
@@ -162,11 +162,11 @@ void Renderer::Render(const vector<Entity> &objects)
 	glfwSwapBuffers(window);
 }
 
-void Renderer::Terminate(const vector<Entity> &objects) 
+void Renderer::Terminate(const vector<Entity*> &objects) 
 {
 	for (auto obj : objects)
 	{
-		glDeleteTextures(1, &obj.textureID);
+		glDeleteTextures(1, &obj->textureID);
 	}
 	for (auto obj: shaders)
 	{
@@ -181,51 +181,56 @@ GLFWwindow* Renderer::GetWindow()
 	return window;
 }
 
-void Renderer::AddObject(Entity obj, vector<Entity> &objects)
+void Renderer::AddObject(Entity* obj, vector<Entity*> &objects)
 {
-	Mesh::LoadMesh(obj.modelPath);
-	if (!obj.texturePath.empty())
-		obj.textureID = Mesh::LoadTexture(obj.texturePath);
-	if (!obj.normalPath.empty())
-		obj.normalID = Mesh::LoadTexture(obj.normalPath);
+	Mesh::LoadMesh(obj->modelPath);
+	if (!obj->texturePath.empty())
+		obj->textureID = Mesh::LoadTexture(obj->texturePath);
+	if (!obj->normalPath.empty())
+		obj->normalID = Mesh::LoadTexture(obj->normalPath);
 	glCheckError();
 	objects.push_back(obj);
 }
 
-void Renderer::Draw(Entity &obj)
+void Renderer::Draw(Entity* &obj)
 {
-	shaders[obj.shaderID].use();
-	for (auto tuple : obj.uniformsf)
+	shaders[obj->shaderID].use();
+	for (auto tuple : obj->uniformsf)
 	{
-		int location = glGetUniformLocation(shaders[obj.shaderID].ID, get<0>(tuple).c_str());
+		int location = glGetUniformLocation(shaders[obj->shaderID].ID, get<0>(tuple).c_str());
 		glUniform1f(location, get<1>(tuple));
 	}
-	int modelLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "model");
-	int normalMLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "normalM");
-	int textureBoolLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "textureOn");
-	int normalBoolLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "normalOn");
+	for (auto tuple : obj->uniformsv3)
+	{
+		int location = glGetUniformLocation(shaders[obj->shaderID].ID, get<0>(tuple).c_str());
+		glUniform3f(location, get<1>(tuple).x, get<1>(tuple).y, get<1>(tuple).z);
+	}
+	int modelLocation = glGetUniformLocation(shaders[obj->shaderID].ID, "model");
+	int normalMLocation = glGetUniformLocation(shaders[obj->shaderID].ID, "normalM");
+	int textureBoolLocation = glGetUniformLocation(shaders[obj->shaderID].ID, "textureOn");
+	int normalBoolLocation = glGetUniformLocation(shaders[obj->shaderID].ID, "normalOn");
 	glCheckError();
-	mat3 normalM = transpose(inverse(mat3(obj.modelMatrix)));
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(obj.modelMatrix));
+	mat3 normalM = transpose(inverse(mat3(obj->modelMatrix)));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(obj->modelMatrix));
 	glUniformMatrix3fv(normalMLocation, 1, GL_FALSE, glm::value_ptr(normalM));
 	glCheckError();
-	Mesh* mesh = Mesh::LoadMesh(obj.modelPath);
-	if (!obj.texturePath.empty())
+	Mesh* mesh = Mesh::LoadMesh(obj->modelPath);
+	if (!obj->texturePath.empty())
 	{
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, obj.textureID);
-		int textureLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "diffuseMap");
+		glBindTexture(GL_TEXTURE_2D, obj->textureID);
+		int textureLocation = glGetUniformLocation(shaders[obj->shaderID].ID, "diffuseMap");
 		glUniform1i(textureLocation, 0);
 		glUniform1i(textureBoolLocation, true);
 	}
 	else
 		glUniform1i(textureBoolLocation, false);
 	
-	if (!obj.normalPath.empty())
+	if (!obj->normalPath.empty())
 	{
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, obj.normalID);
-		int textureLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "normalMap");
+		glBindTexture(GL_TEXTURE_2D, obj->normalID);
+		int textureLocation = glGetUniformLocation(shaders[obj->shaderID].ID, "normalMap");
 		glUniform1i(textureLocation, 1);
 		glUniform1i(normalBoolLocation, true);
 	}

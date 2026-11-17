@@ -1,5 +1,3 @@
-
-#include <iostream>
 #include <vector>
 #include <chrono>
 #include <thread>
@@ -8,61 +6,128 @@
 #include "headers/Camera.h"
 using namespace std;
 
-namespace
+double lastX = 0.0, lastY = 0.0;
+float cameraYaw,cameraPitch;
+vec3 cameraFront;
+vec3 movementInput = vec3(0.0f);
+void key_callback(GLFWwindow* window, const int key, int scancode, const int action, int mods)
 {
-	static void key_callback(GLFWwindow* window, const int key, int scancode, const int action, int mods) {
-		if(key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-			Renderer::SwitchProjection();
-		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-			glfwSetWindowShouldClose(window, true);
-		if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
-			Renderer::SwitchWireframe();
-		if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
-			Renderer::SwitchFaceCulling();
-	}
+	if(key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+		Renderer::SwitchProjection();
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+	if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
+		Renderer::SwitchWireframe();
+	if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
+		Renderer::SwitchFaceCulling();
+	if (key == GLFW_KEY_W && action == GLFW_PRESS)
+		movementInput.x = 1.0;
+	else if (key == GLFW_KEY_S && action == GLFW_PRESS)
+		movementInput.x = -1.0;
+	if ((key == GLFW_KEY_W || key == GLFW_KEY_S) && action == GLFW_RELEASE)
+		movementInput.x = 0;
+	if (key == GLFW_KEY_A && action == GLFW_PRESS)
+		movementInput.z = -1.0;
+	else if (key == GLFW_KEY_D && action == GLFW_PRESS)
+		movementInput.z = 1.0;
+	if ((key == GLFW_KEY_A || key == GLFW_KEY_D) && action == GLFW_RELEASE)
+		movementInput.z = 0;
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; 
+	lastX = xpos;
+	lastY = ypos;
+
+	float sensitivity = 0.1f;
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	cameraYaw   += xoffset;
+	cameraPitch += yoffset;
+
+	cameraPitch = clamp(cameraPitch, -89.0f, 89.0f);
+
+	vec3 direction;
+	direction.x = cos(radians(cameraYaw)) * cos(radians(cameraPitch));
+	direction.y = sin(radians(cameraPitch));
+	direction.z = sin(radians(cameraYaw)) * cos(radians(cameraPitch));
+	cameraFront = normalize(direction);
 }
 
 int main()
 {
-	vector<Entity> objects;
+	vector<Entity*> objects;
 	
 	if (!Renderer::InitializeRenderer(1366,768))
 		return -1;
 	glfwSetFramebufferSizeCallback(Renderer::GetWindow(), Renderer::WindowResized);
 	glfwSetWindowShouldClose(Renderer::GetWindow(), false);
 	glfwSetKeyCallback(Renderer::GetWindow(), key_callback);
+	glfwSetInputMode(Renderer::GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
+	glfwSetCursorPosCallback(Renderer::GetWindow(), mouse_callback); 
 	
-	Renderer::AddObject(Entity("bust.obj", 0, "Textures/bust_diff.jpg", "Textures/bust_nor2.png"), objects);
-	Renderer::AddObject(Entity("sharpcube.obj", 0, "Textures/rust_diff.png","Textures/rust_nor.png"), objects);
-	Renderer::AddObject(Entity("quad.obj", 0, "Textures/pavers_diff.png", "Textures/pavers_nor.png"), objects);
-	objects[0].uniformsf.push_back(tuple<string,float>("specularPower",256));
-	objects[0].uniformsf.push_back(tuple<string,float>("specularStrength",1));
-	objects[0].uniformsf.push_back(tuple<string,float>("tiling",1));
-	objects[1].uniformsf.push_back(tuple<string,float>("specularPower",32));
-	objects[1].uniformsf.push_back(tuple<string,float>("specularStrength",0.7));
-	objects[1].uniformsf.push_back(tuple<string,float>("tiling",1));
-	objects[2].uniformsf.push_back(tuple<string,float>("specularPower",64));
-	objects[2].uniformsf.push_back(tuple<string,float>("specularStrength",0.8));
-	objects[2].uniformsf.push_back(tuple<string,float>("tiling",50));
-	objects[1].setParent(&objects[0]);
+	Renderer::AddObject(new Entity("bust.obj", 0, "Textures/bust_diff.jpg", "Textures/bust_nor2.png"), objects);
+	Renderer::AddObject(new Entity("sharpcube.obj", 0, "Textures/rust_diff.png","Textures/rust_nor.png"), objects);
+	Renderer::AddObject(new Entity("quad.obj", 0, "Textures/pavers_diff.png", "Textures/pavers_nor.png"), objects);
+	objects[0]->uniformsf.emplace_back("specularPower",256);
+	objects[0]->uniformsf.emplace_back("specularStrength",1);
+	objects[0]->uniformsf.emplace_back("tiling",1);
+	objects[1]->uniformsf.emplace_back("specularPower",32);
+	objects[1]->uniformsf.emplace_back("specularStrength",0.7);
+	objects[1]->uniformsf.emplace_back("tiling",1);
+	objects[2]->uniformsf.emplace_back("specularPower",64);
+	objects[2]->uniformsf.emplace_back("specularStrength",0.8);
+	objects[2]->uniformsf.emplace_back("tiling",50);
+	objects[1]->setParent(objects[0]);
 	Camera *camera = new Camera(1366,768);
 	Renderer::cameras.push_back(camera);
-	camera->LookAt(vec3(0,1,0), vec3(0,1,0));
 	
-	objects[2].Scale(vec3(50));
+	
+	Entity* player = new Entity("cylinder.obj");
+	player->uniformsv3.emplace_back("color",vec3(0,0,1));
+	Entity* head = new Entity("camera.obj");
+	head->uniformsv3.emplace_back("color",vec3(0.2,0.2,0.2));
+	head->setParent(player);
+	head->Move(vec3(0,1,0));
+	Entity* player2 = new Entity("cylinder.obj");
+	player2->uniformsv3.emplace_back("color",vec3(1,0,0));
+	Entity* head2 = new Entity("camera.obj");
+	head2->uniformsv3.emplace_back("color",vec3(0.2,0.2,0.2));
+	head2->setParent(player2);
+	head2->Move(vec3(0,1,0));
+	objects[2]->Scale(vec3(50));
+	
+	
+	Renderer::AddObject(player, objects);
+	Renderer::AddObject(player2, objects);
+	Renderer::AddObject(head, objects);
+	Renderer::AddObject(head2, objects);
+	camera->SetPosition(vec3(0,1,0));
+	camera->setParent(player);
+	player->Move(vec3(1,0,0));
+	player2->Move(vec3(-1,0,0));
 	double _time = glfwGetTime();
-	double deltaTime=0;
 	float degrees=0;
 	while (!glfwWindowShouldClose(Renderer::GetWindow())) {
 		glfwPollEvents();
-		deltaTime = glfwGetTime()-_time;
+		vec3 facing = normalize(vec3(cameraFront.x,0.0,cameraFront.z));
+		vec3 rightfacing = normalize(cross(cameraFront, vec3(0,1,0)));
+		double deltaTime = glfwGetTime()-_time;
 		_time = glfwGetTime();
 		degrees += deltaTime * 6.0;
-		camera->Move(vec3(sin(radians(degrees * 5)) * 1, 1 ,cos(radians(degrees* 5)) * 1));
-		objects[0].Move(vec3(0,0.6,0));
-		//objects[0].Rotate(vec3(degrees*10,0,0));
-		objects[1].Move(vec3(sin(radians(degrees * 20)) * 0.5,0.2,cos(radians(degrees * 20)) * 0.5));
-		objects[1].Rotate(vec3(0,degrees*10,0));
+		player->SetRotation(vec3(0,-cameraYaw,0));
+		head->SetRotation(vec3(0,0,cameraPitch));
+		
+		objects[0]->SetPosition(vec3(0,sin(_time)*0.2 + 1,0));
+		objects[0]->Rotate(vec3(45*deltaTime,0,0));
+		objects[1]->SetPosition(vec3(sin(radians(degrees * 20)) * 0.5,0.2,cos(radians(degrees * 20)) * 0.5));
+		objects[1]->Rotate(vec3(0,205*deltaTime,0));
+		
+		player->Move(vec3(movementInput.x * facing + movementInput.z*rightfacing) *(float)deltaTime * 5.0f);
+		camera->LookAt(camera->getWorldPosition()+cameraFront, vec3(0,1,0));
 		Renderer::Render(objects);
 		this_thread::sleep_for(std::chrono::milliseconds(10));
 	}

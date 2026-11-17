@@ -351,14 +351,12 @@ void Mesh::setBuffers(const vector<float> &vertexList, const vector<unsigned int
 }
 
 void Mesh::SetTangent(vector<float>& vertexList, vector<unsigned int>& indexList)
-{
-	const int stride = 14;
-	
-    // Accumulate T and B per triangle
+{	
+    //Calculate Tangent and Bi per face
     for (size_t i = 0; i + 2 < indexList.size(); i += 3) {
-        unsigned int i0 = indexList[i + 0] * stride;
-        unsigned int i1 = indexList[i + 1] * stride;
-        unsigned int i2 = indexList[i + 2] * stride;
+        unsigned int i0 = indexList[i + 0] * 14;
+        unsigned int i1 = indexList[i + 1] * 14;
+        unsigned int i2 = indexList[i + 2] * 14;
 
         vec3 p0(vertexList[i0 + 0], vertexList[i0 + 1], vertexList[i0 + 2]);
         vec3 p1(vertexList[i1 + 0], vertexList[i1 + 1], vertexList[i1 + 2]);
@@ -373,43 +371,26 @@ void Mesh::SetTangent(vector<float>& vertexList, vector<unsigned int>& indexList
         vec2 dUV1 = uv1 - uv0;
         vec2 dUV2 = uv2 - uv0;
     	
-    	float denom = (dUV1.x * dUV2.y - dUV2.x * dUV1.y);
-    	float f = (abs(denom) > 1e-6f) ? (1.0f / denom) : 0.0f;
+    	float f = 1.0f;
 
         vec3 tangent = f * (dUV2.y * edge1 - dUV1.y * edge2);
         vec3 bitangent = f * (-dUV2.x * edge1 + dUV1.x * edge2);
 
         for (unsigned int idx : { i0, i1, i2 }) {
-            vertexList[idx + 8]  += tangent.x;
-            vertexList[idx + 9]  += tangent.y;
-            vertexList[idx + 10] += tangent.z;
+        	vec3 n(vertexList[idx + 3], vertexList[idx + 4], vertexList[idx + 5]);
+        	vec3 t(tangent.x, tangent.y, tangent.z);
+        	vec3 b(bitangent.x, bitangent.y, bitangent.z);
+        	// Orthogonalize (Gram-Schmidt) and normalize each vertex's T and B
+        	t = normalize(t - n * dot(n, t));
+        	b = normalize(b);
+        	vertexList[idx + 8]  = t.x;
+        	vertexList[idx + 9]  = t.y;
+        	vertexList[idx + 10] = t.z;
 
-            vertexList[idx + 11] += bitangent.x;
-            vertexList[idx + 12] += bitangent.y;
-            vertexList[idx + 13] += bitangent.z;
+        	vertexList[idx + 11] = b.x;
+        	vertexList[idx + 12] = b.y;
+        	vertexList[idx + 13] = b.z;
         }
-    }
-
-    // Orthogonalize (Gram-Schmidt) and normalize each vertex's T and B
-    for (size_t i = 0; i < vertexList.size(); i += stride) {
-        vec3 n(vertexList[i + 3], vertexList[i + 4], vertexList[i + 5]);
-        vec3 t(vertexList[i + 8], vertexList[i + 9], vertexList[i + 10]);
-        vec3 b(vertexList[i + 11], vertexList[i + 12], vertexList[i + 13]);
-
-        if (length(t) > 1e-6f) {
-            t = normalize(t - n * dot(n, t));
-        }
-        if (length(b) > 1e-6f) {
-            b = normalize(b);
-        }
-
-        vertexList[i + 8]  = t.x;
-        vertexList[i + 9]  = t.y;
-        vertexList[i + 10] = t.z;
-
-        vertexList[i + 11] = b.x;
-        vertexList[i + 12] = b.y;
-        vertexList[i + 13] = b.z;
     }
 }
 

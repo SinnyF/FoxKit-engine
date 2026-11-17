@@ -15,7 +15,10 @@ public:
 	void Move(vec3 move);
 	void Rotate(vec3 rotate);
 	void Scale(vec3 _scale);
+	void SetPosition(vec3 _position);
+	void SetRotation(vec3 _rotation);
 	vec3 getPosition() const;
+	vec3 getWorldPosition() const;
 	vec3 getRotation() const;
 	vec3 getScale() const;
 	mat4 modelMatrix;
@@ -27,12 +30,14 @@ public:
 	string texturePath;
 	string normalPath;
 	vector<tuple<string,float>> uniformsf;
+	vector<tuple<string,vec3>> uniformsv3;
 	vector<Entity*> GetChildren() const;
 	Entity* GetParent() const;
 	void setParent(Entity *_parent);
 	vector<Entity*> children;
 protected:
 	vec3 position = vec3(0);
+	vec3 worldposition = vec3(0);
 	vec3 rotation = vec3(0);
 	vec3 scale = vec3(1.0,1.0,1.0);
 	void Translate();

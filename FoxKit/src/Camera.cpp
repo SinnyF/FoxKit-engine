@@ -17,7 +17,7 @@ void Camera::Resize(const int _width,const int _height)
 
 mat4 Camera::GetView() const
 {
-	return glm::lookAt(position,target,up);
+	return glm::lookAt(worldposition,target,up);
 }
 
 mat4 Camera::GetProjection(const PROJECTION proj) const

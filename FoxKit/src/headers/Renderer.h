@@ -17,17 +17,17 @@ class Renderer
 public: 
 	static void WindowResized(GLFWwindow* window,int width, int height);
 	static int InitializeRenderer(int width,int height);
-	static void Render(const vector<Entity> &objects);
-	static void Terminate(const vector<Entity> &objects);
+	static void Render(const vector<Entity*> &objects);
+	static void Terminate(const vector<Entity*> &objects);
 	static GLFWwindow* GetWindow();
-	static void AddObject(Entity obj, vector<Entity> &objects);
+	static void AddObject(Entity *obj, vector<Entity*> &objects);
 	static void SwitchProjection();
 	static void SwitchWireframe();
 	static void SwitchFaceCulling();
 	static vector<Camera*> cameras;
 	
 private:
-	static void Draw(Entity &obj);
+	static void Draw(Entity* &obj);
 	static vector<Shader> shaders;
 	static double _time;
 	static PROJECTION proj;

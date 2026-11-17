@@ -1,14 +1,30 @@
 #include "headers/Entity.h"
 
+void Entity::SetPosition(vec3 _position)
+{
+    position = _position;
+    worldposition = position;
+    if (parent)
+        worldposition += parent->position; 
+    Translate();
+}
+
+void Entity::SetRotation(vec3 _rotation)
+{
+    rotation = _rotation;
+    Translate();
+}
+
 void Entity::Move(vec3 move)
 {
-    position = move;
+    position += move;
+    worldposition += move;
     Translate();
 }
 
 void Entity::Rotate(vec3 rotate)
 {
-    rotation = rotate;
+    rotation += rotate;
     Translate();
 }
 
@@ -21,6 +37,11 @@ void Entity::Scale(vec3 _scale)
 vec3 Entity::getPosition() const
 {
     return position;
+}
+
+vec3 Entity::getWorldPosition() const
+{
+    return worldposition;
 }
 
 vec3 Entity::getRotation() const
@@ -76,7 +97,11 @@ void Entity::Translate()
 {        
     modelMatrix = mat4(1.0f);
     if (parent)
+    {
         modelMatrix = parent->modelMatrix;
+        worldposition = parent->position + position;
+    }
+        
     modelMatrix = translate(modelMatrix, position);
     vec3 axis = vec3(0);
     if (glm::abs(rotation.x) > 0) modelMatrix = rotate(modelMatrix, radians(rotation.x), vec3(1.0f, 0.0f, 0.0f));
