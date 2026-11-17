@@ -33,18 +33,21 @@ vec3 Entity::getScale() const
     return scale;
 }
 
-Entity::Entity(const string &_modelPath, unsigned int _shaderID, const string &_texturePath)
+Entity::Entity(const string &_modelPath, unsigned int _shaderID, const string &_texturePath, const string &_normalPath)
 {
     modelPath = _modelPath;
     texturePath = _texturePath;
+    normalPath = _normalPath;
     shaderID = _shaderID;
     modelMatrix = mat4(1.0f);
     Translate();
 }
 
-void Entity::setTexture(const string& _texturePath)
+void Entity::setTexture(const string& _texturePath, const string& _normalPath)
 {
     texturePath = _texturePath;
+    if (!_normalPath.empty())
+        normalPath = _normalPath;
 }
 
 Entity::Entity()

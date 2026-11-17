@@ -28,5 +28,6 @@ public:
 private:
     Mesh(string path);
     static map<string, Mesh> loadedMeshes;
-    void setBuffers(const vector<float>& vertexList, const vector<unsigned int>& indexList);
+    void setBuffers(const vector<float>& vertexList,const vector<unsigned int>& indexList);
+    void SetTangent(vector<float>& vertexList, vector<unsigned int>& indexList);
 };

@@ -283,6 +283,14 @@ Mesh::Mesh(string path)
                         vertexList.push_back(0.0f);
                         vertexList.push_back(0.0f);
                     }
+                	//Reserved space for tangents
+                	vertexList.push_back(0.0f);
+                	vertexList.push_back(0.0f);
+                	vertexList.push_back(0.0f);
+                	//BiTangent
+                	vertexList.push_back(0.0f);
+                	vertexList.push_back(0.0f);
+                	vertexList.push_back(0.0f);
                 }
 	            else
 	            {
@@ -294,9 +302,10 @@ Mesh::Mesh(string path)
             }
             index_offset += fv;
         }
-    	setBuffers(vertexList, indexList);
     	indicies = indexList.size();
     }
+	SetTangent(vertexList,  indexList);
+	setBuffers(vertexList, indexList);
 	auto stop = chrono::high_resolution_clock::now();
 	
 	auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
@@ -320,18 +329,88 @@ void Mesh::setBuffers(const vector<float> &vertexList, const vector<unsigned int
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexList.size() * sizeof(unsigned int), &indexList[0], GL_STATIC_DRAW);
 	//Position attributes
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	//Normal attributes
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3* sizeof(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3* sizeof(float)));
 	glEnableVertexAttribArray(1);
 	//UV attributes
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6* sizeof(float)));
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6* sizeof(float)));
 	glEnableVertexAttribArray(2);
+	//Tangent
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8* sizeof(float)));
+	glEnableVertexAttribArray(3);
+	//BiTangent
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11* sizeof(float)));
+	glEnableVertexAttribArray(4);
+	
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 	glDeleteBuffers(1, &VBO);
 	glDeleteBuffers(1, &EBO);
+}
+
+void Mesh::SetTangent(vector<float>& vertexList, vector<unsigned int>& indexList)
+{
+	const int stride = 14;
+	
+    // Accumulate T and B per triangle
+    for (size_t i = 0; i + 2 < indexList.size(); i += 3) {
+        unsigned int i0 = indexList[i + 0] * stride;
+        unsigned int i1 = indexList[i + 1] * stride;
+        unsigned int i2 = indexList[i + 2] * stride;
+
+        vec3 p0(vertexList[i0 + 0], vertexList[i0 + 1], vertexList[i0 + 2]);
+        vec3 p1(vertexList[i1 + 0], vertexList[i1 + 1], vertexList[i1 + 2]);
+        vec3 p2(vertexList[i2 + 0], vertexList[i2 + 1], vertexList[i2 + 2]);
+
+        vec2 uv0(vertexList[i0 + 6], vertexList[i0 + 7]);
+        vec2 uv1(vertexList[i1 + 6], vertexList[i1 + 7]);
+        vec2 uv2(vertexList[i2 + 6], vertexList[i2 + 7]);
+
+        vec3 edge1 = p1 - p0;
+        vec3 edge2 = p2 - p0;
+        vec2 dUV1 = uv1 - uv0;
+        vec2 dUV2 = uv2 - uv0;
+    	
+    	float denom = (dUV1.x * dUV2.y - dUV2.x * dUV1.y);
+    	float f = (abs(denom) > 1e-6f) ? (1.0f / denom) : 0.0f;
+
+        vec3 tangent = f * (dUV2.y * edge1 - dUV1.y * edge2);
+        vec3 bitangent = f * (-dUV2.x * edge1 + dUV1.x * edge2);
+
+        for (unsigned int idx : { i0, i1, i2 }) {
+            vertexList[idx + 8]  += tangent.x;
+            vertexList[idx + 9]  += tangent.y;
+            vertexList[idx + 10] += tangent.z;
+
+            vertexList[idx + 11] += bitangent.x;
+            vertexList[idx + 12] += bitangent.y;
+            vertexList[idx + 13] += bitangent.z;
+        }
+    }
+
+    // Orthogonalize (Gram-Schmidt) and normalize each vertex's T and B
+    for (size_t i = 0; i < vertexList.size(); i += stride) {
+        vec3 n(vertexList[i + 3], vertexList[i + 4], vertexList[i + 5]);
+        vec3 t(vertexList[i + 8], vertexList[i + 9], vertexList[i + 10]);
+        vec3 b(vertexList[i + 11], vertexList[i + 12], vertexList[i + 13]);
+
+        if (length(t) > 1e-6f) {
+            t = normalize(t - n * dot(n, t));
+        }
+        if (length(b) > 1e-6f) {
+            b = normalize(b);
+        }
+
+        vertexList[i + 8]  = t.x;
+        vertexList[i + 9]  = t.y;
+        vertexList[i + 10] = t.z;
+
+        vertexList[i + 11] = b.x;
+        vertexList[i + 12] = b.y;
+        vertexList[i + 13] = b.z;
+    }
 }
 
 void Mesh::CleanUP()

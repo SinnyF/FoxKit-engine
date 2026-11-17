@@ -19,12 +19,13 @@ public:
 	vec3 getRotation() const;
 	vec3 getScale() const;
 	mat4 modelMatrix;
-	unsigned int textureID = 0, shaderID = 0;
-	Entity(const string &_modelPath, unsigned int _shaderID = 0, const string &_texturePath = "");
-	void setTexture(const string &texturePath);
+	unsigned int textureID = 0, shaderID = 0, normalID = 0;
+	Entity(const string &_modelPath, unsigned int _shaderID = 0, const string &_texturePath = "", const string &_normalPath = "");
+	void setTexture(const string &texturePath, const string &normalPath = "");
 	Entity();
 	string modelPath;
 	string texturePath;
+	string normalPath;
 	vector<tuple<string,float>> uniformsf;
 	vector<Entity*> GetChildren() const;
 	Entity* GetParent() const;

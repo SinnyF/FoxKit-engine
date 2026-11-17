@@ -3,6 +3,7 @@
 #include "headers/Renderer.h"
 #include <iostream>
 #include <algorithm>
+#include <complex>
 
 vector<Shader> Renderer::shaders;
 vector<Camera*> Renderer::cameras;
@@ -123,12 +124,13 @@ void Renderer::Render(const vector<Entity> &objects)
 	glClearColor(0.f, 0.5f, 0.6f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	glCheckError();
-	
+	shaders[0].use();	
 	int viewLocation = glGetUniformLocation(shaders[0].ID, "view");
 	int projectionLocation = glGetUniformLocation(shaders[0].ID, "projection");
 	int viewPosLocation = glGetUniformLocation(shaders[0].ID, "viewPos");
-	int lightLocation = glGetUniformLocation(shaders[0].ID, "lightPos");
-	glUniform3f(lightLocation, 6, 2.0f, 6);
+	int lightLocation = glGetUniformLocation(shaders[0].ID, "lightDir");
+	vec3 lightDir = normalize(vec3(10,1,10));
+	glUniform3f(lightLocation,lightDir.x,lightDir.y,lightDir.z);
 	glCheckError();
 	
 	glCheckError();
@@ -184,6 +186,8 @@ void Renderer::AddObject(Entity obj, vector<Entity> &objects)
 	Mesh::LoadMesh(obj.modelPath);
 	if (!obj.texturePath.empty())
 		obj.textureID = Mesh::LoadTexture(obj.texturePath);
+	if (!obj.normalPath.empty())
+		obj.normalID = Mesh::LoadTexture(obj.normalPath);
 	glCheckError();
 	objects.push_back(obj);
 }
@@ -199,19 +203,35 @@ void Renderer::Draw(Entity &obj)
 	int modelLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "model");
 	int normalMLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "normalM");
 	int textureBoolLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "textureOn");
+	int normalBoolLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "normalOn");
 	glCheckError();
-	mat3 normalM = transpose(inverse(obj.modelMatrix));
+	mat3 normalM = transpose(inverse(mat3(obj.modelMatrix)));
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(obj.modelMatrix));
 	glUniformMatrix3fv(normalMLocation, 1, GL_FALSE, glm::value_ptr(normalM));
 	glCheckError();
 	Mesh* mesh = Mesh::LoadMesh(obj.modelPath);
 	if (!obj.texturePath.empty())
 	{
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, obj.textureID);
+		int textureLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "diffuseMap");
+		glUniform1i(textureLocation, 0);
 		glUniform1i(textureBoolLocation, true);
 	}
 	else
 		glUniform1i(textureBoolLocation, false);
+	
+	if (!obj.normalPath.empty())
+	{
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, obj.normalID);
+		int textureLocation = glGetUniformLocation(shaders[obj.shaderID].ID, "normalMap");
+		glUniform1i(textureLocation, 1);
+		glUniform1i(normalBoolLocation, true);
+	}
+	else
+		glUniform1i(normalBoolLocation, false);
+	
 	glBindVertexArray(mesh->VAO);
 	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh->indicies), GL_UNSIGNED_INT, nullptr);
 	glBindVertexArray(0);
