@@ -13,6 +13,7 @@ PROJECTION Renderer::proj = PERSPECTIVE;
 
 double Renderer::_time = 0;
 bool Renderer::faceCulling = true;
+static bool player2Loaded = true;
 
 GLenum glCheckError_(const char* file, int line)
 {
@@ -67,10 +68,25 @@ void Renderer::SwitchFaceCulling()
 		faceCulling = !faceCulling;
 }
 
+void Renderer::NewPlayer(bool isSet)
+{
+	player2Loaded = isSet;
+	int width, height;
+	glfwGetWindowSize(window, &width, &height);
+	WindowResized(window, width, height);
+}
+
 void Renderer::WindowResized(GLFWwindow* window,const int width,const int height) 
 {
-	glViewport(0,0,width,height);
-	cameras[0]->Resize(width,height);
+	if(!player2Loaded)
+	{
+		cameras[0]->Resize(width,height);
+	}
+	else
+	{
+		cameras[0]->Resize(width/2, height);
+		cameras[1]->Resize(width/2, height);
+	}
 }
 
 int Renderer::InitializeRenderer(const int width,const int height)
@@ -123,39 +139,21 @@ void Renderer::Render(const vector<Entity*> &objects)
 {
 	glClearColor(0.f, 0.5f, 0.6f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-	glCheckError();
-	shaders[0].use();	
-	int viewLocation = glGetUniformLocation(shaders[0].ID, "view");
-	int projectionLocation = glGetUniformLocation(shaders[0].ID, "projection");
-	int viewPosLocation = glGetUniformLocation(shaders[0].ID, "viewPos");
-	int lightLocation = glGetUniformLocation(shaders[0].ID, "lightDir");
-	vec3 lightDir = normalize(vec3(10,1,10));
-	glUniform3f(lightLocation,lightDir.x,lightDir.y,lightDir.z);
-	glCheckError();
 	
-	glCheckError();
-	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetView()));
-	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetProjection(proj)));
-	glUniform3f(viewPosLocation, cameras[0]->getWorldPosition().x, cameras[0]->getWorldPosition().y, cameras[0]->getWorldPosition().z);
-	glCheckError();
+	int width, height;
+	glfwGetWindowSize(window, &width, &height);
 	
-	shaders[1].use();
-	viewLocation = glGetUniformLocation(shaders[1].ID, "view");
-	projectionLocation = glGetUniformLocation(shaders[1].ID, "projection");
-	viewPosLocation = glGetUniformLocation(shaders[1].ID, "viewPos");
-	glCheckError();
-	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetView()));
-	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(cameras[0]->GetProjection(proj)));
-	glUniform3f(viewPosLocation, cameras[0]->getWorldPosition().x, cameras[0]->getWorldPosition().y, cameras[0]->getWorldPosition().z);
-	glCheckError();
-	_time = glfwGetTime();
-	int timeLocation = glGetUniformLocation(shaders[1].ID, "time");
-	glUniform1f(timeLocation, (float)_time);
-	glCheckError();
-	
-	for (auto obj : objects)
+	if (!player2Loaded)
 	{
-		Draw(obj);
+		glViewport(0,0,width,height);
+		RenderFromCamera(cameras[0], objects);
+	}
+	else
+	{
+		glViewport(0,0,width/2,height);
+		RenderFromCamera(cameras[0],objects);
+		glViewport(width/2,0,width/2,height);
+		RenderFromCamera(cameras[1],objects);
 	}
 	
 	glCheckError();
@@ -241,5 +239,28 @@ void Renderer::Draw(Entity* &obj)
 	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh->indicies), GL_UNSIGNED_INT, nullptr);
 	glBindVertexArray(0);
 	glCheckError();
+}
+
+void Renderer::RenderFromCamera(Camera* camera, const vector<Entity*>& objects)
+{
+	_time = glfwGetTime();
+	vec3 lightDir = normalize(vec3(10, 1, 10));
+	
+	shaders[0].use();
+	glUniform3f(glGetUniformLocation(shaders[0].ID, "lightDir"), lightDir.x, lightDir.y, lightDir.z);
+	glUniformMatrix4fv(glGetUniformLocation(shaders[0].ID, "view"), 1, GL_FALSE, glm::value_ptr(camera->GetView()));
+	glUniformMatrix4fv(glGetUniformLocation(shaders[0].ID, "projection"), 1, GL_FALSE, glm::value_ptr(camera->GetProjection(proj)));
+	glUniform3f(glGetUniformLocation(shaders[0].ID, "viewPos"), camera->getWorldPosition().x, camera->getWorldPosition().y, camera->getWorldPosition().z);
+	
+	shaders[1].use();
+	glUniformMatrix4fv(glGetUniformLocation(shaders[1].ID, "view"), 1, GL_FALSE, glm::value_ptr(camera->GetView()));
+	glUniformMatrix4fv(glGetUniformLocation(shaders[1].ID, "projection"), 1, GL_FALSE, glm::value_ptr(camera->GetProjection(proj)));
+	glUniform3f(glGetUniformLocation(shaders[1].ID, "viewPos"), camera->getWorldPosition().x, camera->getWorldPosition().y, camera->getWorldPosition().z);
+	glUniform1f(glGetUniformLocation(shaders[1].ID, "time"), (float)_time);
+
+	for (auto obj : objects)
+	{
+		Draw(obj);
+	}
 }
 

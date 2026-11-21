@@ -24,10 +24,12 @@ public:
 	static void SwitchProjection();
 	static void SwitchWireframe();
 	static void SwitchFaceCulling();
+	static void NewPlayer(bool isSet);
 	static vector<Camera*> cameras;
 	
 private:
 	static void Draw(Entity* &obj);
+	static void RenderFromCamera(Camera *camera, const vector<Entity*> &objects);
 	static vector<Shader> shaders;
 	static double _time;
 	static PROJECTION proj;
